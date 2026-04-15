@@ -1,0 +1,35 @@
+kind: ProphetModelSpec
+metadata:
+  name: gbm-forecast-v1
+  owner: "signals"
+spec:
+  task: forecast.multi_horizon
+  dataset:
+    uri: "s3://lake/manifests/bars_1m/v2026-01-14T12:00Z.json"
+    target: "return_1m"
+    timestamp: "ts"
+    group: "sym"
+    covariates:
+      - "vol_5m"
+      - "spread"
+      - "imbalance"
+  model:
+    family: gbm
+    variant: "lightgbm"
+    lags: 256
+    rolling_windows: [5, 20, 60]
+    horizon: 60
+    loss: "pinball"
+    quantiles: [0.1, 0.5, 0.9]
+  train:
+    engine: k8sjob
+    image: "ghcr.io/prophet-platform/prophet-models-classical:0.2.0"
+  serve:
+    mode: nearline
+    schedule: "*/1 * * * *"
+    sink:
+      clickhouse_table: "forecasts_1m"
+  eval:
+    metrics:
+      - name: "pinball"
+      - name: "coverage"

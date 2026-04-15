@@ -1,0 +1,5 @@
+# Whether to install example model specs as ConfigMaps
+installExampleSpecs: true
+
+# Name of the example spec ConfigMap
+exampleSpecsConfigMapName: prophet-model-specs

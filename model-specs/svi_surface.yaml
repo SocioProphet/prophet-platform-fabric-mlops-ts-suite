@@ -1,0 +1,27 @@
+kind: ProphetModelSpec
+metadata:
+  name: svi-surface-v1
+  owner: "options"
+spec:
+  task: options.iv_surface_fit
+  dataset:
+    uri: "s3://lake/manifests/iv_surface/v2026-01-14T12:00Z.json"
+    target: "iv"
+    timestamp: "ts"
+    group: "sym"
+  model:
+    family: svi
+    variant: "raw_svi"
+    constraints:
+      no_arbitrage: true
+  train:
+    engine: k8sjob
+    image: "ghcr.io/prophet-platform/prophet-models-surfaces:0.2.0"
+  serve:
+    mode: nearline
+    schedule: "*/5 * * * *"
+    sink:
+      clickhouse_table: "iv_surface_params"
+  eval:
+    metrics:
+      - name: "rmse_iv"

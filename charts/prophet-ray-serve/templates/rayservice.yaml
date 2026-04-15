@@ -1,0 +1,56 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: {{ include "prophet-ray-serve.fullname" . }}
+  labels:
+    app.kubernetes.io/name: prophet-ray-serve
+    app.kubernetes.io/part-of: prophet-platform
+    prophet.ai/atom: prophet-ray-serve
+spec:
+  serveConfigV2: |
+{{ .Values.serve.serveConfigV2 | indent 4 }}
+  rayClusterConfig:
+    rayVersion: {{ .Values.ray.version | quote }}
+    headGroupSpec:
+      serviceType: ClusterIP
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: {{ .Values.ray.image | quote }}
+              resources:
+                requests:
+                  cpu: {{ .Values.ray.head.cpu | quote }}
+                  memory: {{ .Values.ray.head.memory | quote }}
+                limits:
+                  cpu: {{ .Values.ray.head.cpu | quote }}
+                  memory: {{ .Values.ray.head.memory | quote }}
+              ports:
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 8000
+                  name: serve
+    workerGroupSpecs:
+      - groupName: workers
+        replicas: {{ .Values.ray.worker.replicas }}
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: {{ .Values.ray.image | quote }}
+                resources:
+                  requests:
+                    cpu: {{ .Values.ray.worker.cpu | quote }}
+                    memory: {{ .Values.ray.worker.memory | quote }}
+{{- if gt (int .Values.ray.worker.gpus) 0 }}
+                    nvidia.com/gpu: {{ .Values.ray.worker.gpus }}
+{{- end }}
+                  limits:
+                    cpu: {{ .Values.ray.worker.cpu | quote }}
+                    memory: {{ .Values.ray.worker.memory | quote }}
+{{- if gt (int .Values.ray.worker.gpus) 0 }}
+                    nvidia.com/gpu: {{ .Values.ray.worker.gpus }}
+{{- end }}

@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: prophet-ts-demo-
+  namespace: prophet-workflows
+spec:
+  workflowTemplateRef:
+    name: prophet-ts-train-eval-deploy
+  arguments:
+    parameters:
+      - name: trainer_image
+        value: "ghcr.io/prophet-platform/prophet-models-garch:0.1.0"
+      - name: spec_configmap
+        value: "prophet-model-specs"
+      - name: spec_key
+        value: "model.yaml"
+      - name: out_path
+        value: "/tmp/out"
+      - name: deploy
+        value: "false"

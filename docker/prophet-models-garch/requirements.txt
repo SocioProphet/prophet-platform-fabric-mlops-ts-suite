@@ -1,0 +1,7 @@
+pyyaml
+pandas
+numpy
+pyarrow
+arch
+mlflow
+boto3

@@ -1,0 +1,42 @@
+helmDefaults:
+  wait: true
+  timeout: 1200
+  createNamespace: true
+
+repositories:
+  - name: seldon-charts
+    url: https://seldonio.github.io/helm-charts/
+
+releases:
+  # --- KServe (OCI Helm charts hosted on GHCR) ---
+  # KServe commonly requires additional stack choices (Knative vs "raw" mode).
+  # We keep this in a separate helmfile so you can opt-in explicitly.
+  - name: kserve-crds
+    namespace: kserve
+    chart: oci://ghcr.io/kserve/charts/kserve-crd
+    values:
+      - values/kserve-crd.yaml
+
+  - name: kserve
+    namespace: kserve
+    chart: oci://ghcr.io/kserve/charts/kserve
+    values:
+      - values/kserve.yaml
+    needs:
+      - kserve/kserve-crds
+
+  # --- SELDON (optional serving / LLMOps framework) ---
+  # Seldon Core 2 has its own architecture; it also mentions Kafka as a prerequisite for pipelines.
+  - name: seldon-core-v2-crds
+    namespace: default
+    chart: seldon-charts/seldon-core-v2-crds
+    values:
+      - values/seldon-core-v2-crds.yaml
+
+  - name: seldon-core-v2-setup
+    namespace: seldon-mesh
+    chart: seldon-charts/seldon-core-v2-setup
+    values:
+      - values/seldon-core-v2-setup.yaml
+    needs:
+      - default/seldon-core-v2-crds

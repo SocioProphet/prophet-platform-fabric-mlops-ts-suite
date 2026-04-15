@@ -1,0 +1,54 @@
+apiVersion: ray.io/v1
+kind: RayJob
+metadata:
+  name: {{ include "prophet-ray-train.fullname" . }}
+  labels:
+    app.kubernetes.io/name: prophet-ray-train
+    app.kubernetes.io/part-of: prophet-platform
+    prophet.ai/atom: prophet-ray-train
+spec:
+  entrypoint: {{ .Values.job.entrypoint | quote }}
+  shutdownAfterJobFinishes: {{ .Values.job.shutdownAfterJobFinishes }}
+  rayClusterSpec:
+    rayVersion: {{ .Values.rayCluster.rayVersion | quote }}
+    headGroupSpec:
+      serviceType: ClusterIP
+      rayStartParams:
+        dashboard-host: "0.0.0.0"
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: {{ .Values.job.image | quote }}
+              env:
+                # Prefer Ray Train V2 (Ray 2.43+). Set this explicitly for forward compatibility.
+                - name: RAY_TRAIN_V2_ENABLED
+                  value: "1"
+              resources:
+                requests:
+                  cpu: {{ .Values.rayCluster.head.cpu | quote }}
+                  memory: {{ .Values.rayCluster.head.memory | quote }}
+                limits:
+                  cpu: {{ .Values.rayCluster.head.cpu | quote }}
+                  memory: {{ .Values.rayCluster.head.memory | quote }}
+    workerGroupSpecs:
+      - groupName: workers
+        replicas: {{ .Values.rayCluster.worker.replicas }}
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: {{ .Values.job.image | quote }}
+                env:
+                  - name: RAY_TRAIN_V2_ENABLED
+                    value: "1"
+                resources:
+                  requests:
+                    cpu: {{ .Values.rayCluster.worker.cpu | quote }}
+                    memory: {{ .Values.rayCluster.worker.memory | quote }}
+                    nvidia.com/gpu: {{ .Values.rayCluster.worker.gpus }}
+                  limits:
+                    cpu: {{ .Values.rayCluster.worker.cpu | quote }}
+                    memory: {{ .Values.rayCluster.worker.memory | quote }}
+                    nvidia.com/gpu: {{ .Values.rayCluster.worker.gpus }}

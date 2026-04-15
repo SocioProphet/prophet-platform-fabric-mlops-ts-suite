@@ -1,0 +1,13 @@
+{{- if .Values.installExampleSpecs }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.exampleSpecsConfigMapName }}
+  labels:
+    app.kubernetes.io/name: prophet-ts-workflows
+    app.kubernetes.io/part-of: prophet-platform
+data:
+  # Pick one default spec for the Argo template demo.
+  model.yaml: |
+{{ .Files.Get "model-specs/garch_volatility.yaml" | indent 4 }}
+{{- end }}

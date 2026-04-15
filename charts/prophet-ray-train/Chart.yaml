@@ -1,0 +1,6 @@
+apiVersion: v2
+name: prophet-ray-train
+description: Prophet platform atom: Ray Train via KubeRay RayJob CR
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

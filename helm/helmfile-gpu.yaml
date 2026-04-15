@@ -1,0 +1,16 @@
+helmDefaults:
+  wait: true
+  timeout: 2400
+  createNamespace: true
+
+repositories:
+  - name: nvidia
+    url: https://helm.ngc.nvidia.com/nvidia
+
+releases:
+  # --- GPU STACK (optional; only on GPU clusters/node pools) ---
+  - name: gpu-operator
+    namespace: gpu-operator
+    chart: nvidia/gpu-operator
+    values:
+      - values/gpu-operator.yaml

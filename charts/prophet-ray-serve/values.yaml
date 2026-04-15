@@ -1,0 +1,39 @@
+nameOverride: ""
+fullnameOverride: ""
+
+ray:
+  version: "2.53.0"
+  image: "rayproject/ray:2.53.0-py311"
+  head:
+    cpu: "2"
+    memory: "4Gi"
+  worker:
+    replicas: 2
+    cpu: "4"
+    memory: "8Gi"
+    gpus: 0
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+
+serve:
+  # Use `serve build` to generate ServeConfigV2 and paste here (as raw YAML).
+  # For the baseline, we ship a tiny example app.
+  serveConfigV2: |
+    applications:
+      - name: default
+        route_prefix: /
+        import_path: "app:deployment_graph"
+        runtime_env:
+          working_dir: "https://github.com/ray-project/test_dag/archive/refs/heads/master.zip"
+        deployments:
+          - name: Model
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 1
+
+service:
+  # RayService creates a K8s Service automatically for the Serve app; optionally, you can also create an Istio VirtualService/Gateway.
+  createIstioVirtualService: false
+  host: "socioprofit.local"

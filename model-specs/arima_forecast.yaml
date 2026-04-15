@@ -1,0 +1,27 @@
+kind: ProphetModelSpec
+metadata:
+  name: arima-forecast-v1
+  owner: "research"
+spec:
+  task: forecast.multi_horizon
+  dataset:
+    uri: "s3://lake/manifests/bars_5m/v2026-01-14T12:00Z.json"
+    target: "return_5m"
+    timestamp: "ts"
+    group: "sym"
+  model:
+    family: arima
+    order: [1, 0, 0]
+  train:
+    engine: k8sjob
+    image: "ghcr.io/prophet-platform/prophet-models-classical:0.2.0"
+    entrypoint: "python -m train.main --spec /spec/model.yaml --out /out"
+  serve:
+    mode: nearline
+    schedule: "*/5 * * * *"
+    sink:
+      clickhouse_table: "forecasts_5m"
+  eval:
+    metrics:
+      - name: "mae"
+      - name: "rmse"

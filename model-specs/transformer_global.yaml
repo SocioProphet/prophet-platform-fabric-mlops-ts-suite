@@ -1,0 +1,35 @@
+kind: ProphetModelSpec
+metadata:
+  name: transformer-global-v1
+  owner: "platform-ml"
+spec:
+  task: forecast.global_multi_series
+  dataset:
+    uri: "s3://lake/manifests/multi_asset_bars/v2026-01-14T12:00Z.json"
+    target: "return_5m"
+    timestamp: "ts"
+    group: "sym"
+    static_features:
+      - "asset_class"
+      - "exchange"
+  model:
+    family: deep.transformer
+    variant: "patch-transformer"
+    context_window: 2048
+    horizon: 24
+    loss: "crps"
+    distribution: "student_t"
+  train:
+    engine: rayjob
+    ray:
+      cluster_profile: "gpu-medium"
+    image: "ghcr.io/prophet-platform/models-transformer:0.1.0"
+  serve:
+    mode: nearline
+    schedule: "*/5 * * * *"  # every 5 min
+    sink:
+      clickhouse_table: "forecasts_5m"
+  eval:
+    metrics:
+      - name: "crps"
+      - name: "calibration_pit"

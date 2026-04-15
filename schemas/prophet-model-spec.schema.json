@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProphetModelSpec",
+  "type": "object",
+  "required": [
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "ProphetModelSpec"
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "task",
+        "dataset",
+        "model",
+        "train",
+        "serve"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "dataset": {
+          "type": "object",
+          "required": [
+            "uri",
+            "target"
+          ],
+          "properties": {
+            "uri": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string"
+            },
+            "group": {
+              "type": "string"
+            },
+            "covariates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "static_features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "model": {
+          "type": "object",
+          "required": [
+            "family"
+          ],
+          "properties": {
+            "family": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "train": {
+          "type": "object",
+          "required": [
+            "engine",
+            "image"
+          ],
+          "properties": {
+            "engine": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "entrypoint": {
+              "type": "string"
+            },
+            "resources": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "serve": {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string"
+            },
+            "engine": {
+              "type": "string"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "schedule": {
+              "type": "string"
+            },
+            "sink": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": true
+        },
+        "eval": {
+          "type": "object",
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "gates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "metric",
+                  "op"
+                ],
+                "properties": {
+                  "metric": {
+                    "type": "string"
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "<=",
+                      "<",
+                      ">=",
+                      ">"
+                    ]
+                  },
+                  "value": {
+                    "type": "number"
+                  },
+                  "baseline": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

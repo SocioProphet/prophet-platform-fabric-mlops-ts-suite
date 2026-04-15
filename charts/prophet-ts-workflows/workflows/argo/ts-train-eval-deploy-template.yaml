@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: prophet-ts-train-eval-deploy
+  namespace: prophet-workflows
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: trainer_image
+        value: "ghcr.io/prophet-platform/prophet-models-classical:0.2.0"
+      - name: spec_configmap
+        value: "prophet-model-specs"
+      - name: spec_key
+        value: "model.yaml"
+      - name: out_path
+        value: "/tmp/out"
+      - name: deploy
+        value: "false"
+
+  templates:
+    - name: main
+      steps:
+        - - name: train
+            template: train
+        - - name: evaluate
+            template: evaluate
+        - - name: deploy
+            template: deploy
+            when: "{{workflow.parameters.deploy}} == true && {{steps.evaluate.outputs.parameters.passed}} == true"
+
+    - name: train
+      volumes:
+        - name: spec-vol
+          configMap:
+            name: "{{workflow.parameters.spec_configmap}}"
+      container:
+        image: "{{workflow.parameters.trainer_image}}"
+        command: ["python", "-m", "train.main"]
+        args:
+          - "--spec"
+          - "/spec/model.yaml"
+          - "--out"
+          - "{{workflow.parameters.out_path}}"
+        volumeMounts:
+          - name: spec-vol
+            mountPath: /spec
+      outputs:
+        artifacts:
+          - name: train-out
+            path: "{{workflow.parameters.out_path}}"
+
+    - name: evaluate
+      volumes:
+        - name: spec-vol
+          configMap:
+            name: "{{workflow.parameters.spec_configmap}}"
+      inputs:
+        artifacts:
+          - name: train-out
+            path: /in
+      container:
+        image: "{{workflow.parameters.trainer_image}}"
+        command: ["sh", "-c"]
+        args:
+          - |
+            python -m prophet_ts.gating --spec /spec/model.yaml --metrics /in/metrics.json --out /tmp/gates.json
+            python -c "import json; d=json.load(open('/tmp/gates.json')); open('/tmp/passed.txt','w').write('true' if d.get('passed') else 'false')"
+        volumeMounts:
+          - name: spec-vol
+            mountPath: /spec
+      outputs:
+        parameters:
+          - name: passed
+            valueFrom:
+              path: /tmp/passed.txt
+        artifacts:
+          - name: gates
+            path: /tmp/gates.json
+
+    - name: deploy
+      # This is a stub. In production, deployment is usually GitOps-driven:
+      # - write new model version into registry
+      # - update RayService/KServe spec in git repo
+      # - Argo CD sync applies the change
+      container:
+        image: alpine:3.20
+        command: ["sh", "-c"]
+        args:
+          - |
+            echo "Deploy step is intentionally a stub. Use GitOps for serving updates."

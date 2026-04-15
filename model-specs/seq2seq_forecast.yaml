@@ -1,0 +1,40 @@
+kind: ProphetModelSpec
+metadata:
+  name: seq2seq-forecast-v1
+  owner: "signals-team"
+spec:
+  task: forecast.multi_horizon
+  dataset:
+    uri: "s3://lake/manifests/bars_1m/v2026-01-14T12:00Z.json"
+    target: "return_1m"
+    timestamp: "ts"
+    group: "sym"
+    covariates:
+      - "vol_5m"
+      - "spread"
+      - "imbalance"
+  model:
+    family: deep.seq2seq
+    encoder: "gru"
+    decoder: "gru"
+    attention: true
+    context_window: 512
+    horizon: 60
+    loss: "pinball"
+    quantiles: [0.1, 0.5, 0.9]
+  train:
+    engine: rayjob
+    ray:
+      cluster_profile: "gpu-small"
+    image: "ghcr.io/prophet-platform/models-seq2seq:0.1.0"
+  serve:
+    engine: rayservice
+    endpoint: "/forecast"
+  eval:
+    metrics:
+      - name: "pinball"
+      - name: "coverage"
+    gates:
+      - metric: "coverage"
+        op: ">="
+        value: 0.85

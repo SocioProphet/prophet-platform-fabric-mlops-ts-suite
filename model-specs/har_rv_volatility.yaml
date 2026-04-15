@@ -1,0 +1,25 @@
+kind: ProphetModelSpec
+metadata:
+  name: har-rv-vol-v1
+  owner: "risk-team"
+spec:
+  task: risk.volatility_forecast
+  dataset:
+    uri: "s3://lake/manifests/realized_vol/v2026-01-14T12:00Z.json"
+    target: "rv"
+    timestamp: "ts"
+    group: "sym"
+  model:
+    family: "har_rv"
+    variant: "har"
+    horizons: [1, 5, 22]
+  train:
+    engine: k8sjob
+    image: "ghcr.io/prophet-platform/prophet-models-classical:0.2.0"
+  serve:
+    mode: batch
+    schedule: "0 * * * *"
+  eval:
+    metrics:
+      - name: "mse_vol"
+      - name: "qlike"

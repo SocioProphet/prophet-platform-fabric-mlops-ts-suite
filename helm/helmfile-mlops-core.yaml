@@ -1,0 +1,60 @@
+helmDefaults:
+  wait: true
+  timeout: 1200
+  createNamespace: true
+
+repositories:
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+  - name: feast-operator
+    url: https://feast-dev.github.io/feast-operator
+  - name: spark-operator
+    url: https://kubeflow.github.io/spark-operator
+  - name: open-telemetry
+    url: https://open-telemetry.github.io/opentelemetry-helm-charts
+
+releases:
+  # --- WORKFLOW ORCHESTRATION ---
+  - name: argo-workflows
+    namespace: prophet-workflows
+    chart: argo/argo-workflows
+    values:
+      - values/argo-workflows.yaml
+
+  - name: prophet-ts-workflows
+    namespace: prophet-workflows
+    chart: ../charts/prophet-ts-workflows
+    values:
+      - values/prophet-ts-workflows.yaml
+    needs:
+      - prophet-workflows/argo-workflows
+
+  # --- EXPERIMENT TRACKING / MODEL REGISTRY (OSS) ---
+  - name: mlflow
+    namespace: prophet-mlops
+    chart: bitnami/mlflow
+    values:
+      - values/mlflow.yaml
+
+  # --- FEATURE STORE (OSS) ---
+  - name: feast-operator
+    namespace: prophet-mlops
+    chart: feast-operator/feast-operator
+    values:
+      - values/feast-operator.yaml
+
+  # --- DATA/FEATURE ENGINEERING RUNTIME (OSS) ---
+  - name: spark-operator
+    namespace: spark-operator
+    chart: spark-operator/spark-operator
+    values:
+      - values/spark-operator.yaml
+
+  # --- TRACES / AUTO-INSTRUMENTATION (OSS) ---
+  - name: opentelemetry-operator
+    namespace: observability
+    chart: open-telemetry/opentelemetry-operator
+    values:
+      - values/opentelemetry-operator.yaml

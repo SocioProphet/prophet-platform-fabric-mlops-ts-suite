@@ -1,0 +1,31 @@
+kind: ProphetModelSpec
+metadata:
+  name: garch-volatility-v1
+  owner: "risk-team"
+spec:
+  task: risk.volatility_forecast
+  dataset:
+    uri: "s3://lake/manifests/returns/v2026-01-14T12:00Z.json"
+    target: "log_return"
+    timestamp: "ts"
+    group: "sym"
+  model:
+    family: garch
+    variant: gjr-garch
+    distribution: student_t
+    p: 1
+    q: 1
+  train:
+    engine: k8sjob
+    image: "ghcr.io/prophet-platform/models-garch:0.1.0"
+  serve:
+    mode: batch
+    schedule: "0 * * * *"  # hourly
+  eval:
+    metrics:
+      - name: "qlike"
+      - name: "mse_vol"
+    gates:
+      - metric: "mse_vol"
+        op: "<="
+        baseline: "garch-volatility-prev"

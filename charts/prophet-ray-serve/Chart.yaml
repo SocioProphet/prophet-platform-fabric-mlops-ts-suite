@@ -1,0 +1,6 @@
+apiVersion: v2
+name: prophet-ray-serve
+description: Prophet platform atom: Ray Serve via KubeRay RayService CR
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

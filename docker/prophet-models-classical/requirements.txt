@@ -1,0 +1,8 @@
+pyyaml
+pandas
+numpy
+pyarrow
+statsmodels
+mlflow
+boto3
+scikit-learn
