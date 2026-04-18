@@ -1,0 +1,23 @@
+{
+  "event_id": "evt_order_intent_0001",
+  "strategy_id": "strategy_mean_reversion_v1",
+  "instrument_id": "AAPL",
+  "venue_id": "XNAS",
+  "intent_kind": "new",
+  "side": "buy",
+  "order_type": "limit",
+  "quantity": "100",
+  "price": "182.45",
+  "time_in_force": "day",
+  "requested_effect_ref": "fx_req_0001",
+  "signal_refs": ["sig_0007"],
+  "authority_context": {
+    "principal": "agent",
+    "delegation_chain": ["desk:equities-us"],
+    "approval_state": "pending"
+  },
+  "risk_labels": ["normal_size"],
+  "policy_labels": ["requires_pretrade_check"],
+  "created_at": "2026-04-15T16:00:00Z",
+  "notes": "example limit-buy intent imported from Profit MPCC trading tranche"
+}
