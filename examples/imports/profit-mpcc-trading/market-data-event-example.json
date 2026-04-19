@@ -1,0 +1,25 @@
+{
+  "event_id": "md_evt_0001",
+  "instrument_id": "AAPL",
+  "venue_id": "XNAS",
+  "event_kind": "quote",
+  "event_time": "2026-04-15T15:59:59Z",
+  "sequence_ref": "889144200",
+  "feed_id": "nasdaq-direct",
+  "raw_payload": {
+    "bid": "182.40",
+    "ask": "182.42",
+    "bid_size": "300",
+    "ask_size": "250"
+  },
+  "canonical_payload": {
+    "best_bid": "182.40",
+    "best_ask": "182.42",
+    "best_bid_size": "300",
+    "best_ask_size": "250"
+  },
+  "quality_flags": ["primary_feed"],
+  "details": {
+    "note": "example normalized quote event imported from Profit MPCC trading tranche"
+  }
+}
