@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/reconciliation-event.schema.json",
+  "title": "ReconciliationEvent",
+  "type": "object",
+  "required": [
+    "event_id",
+    "scope_kind",
+    "status",
+    "recorded_at"
+  ],
+  "properties": {
+    "event_id": { "type": "string" },
+    "scope_kind": {
+      "type": "string",
+      "enum": ["order", "position", "account", "venue-session", "settlement-window"]
+    },
+    "scope_ref": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["matched", "variance_detected", "pending", "resolved", "compensated"]
+    },
+    "variance_kind": { "type": "string" },
+    "expected_value": {
+      "type": ["number", "string", "object", "array", "null"]
+    },
+    "observed_value": {
+      "type": ["number", "string", "object", "array", "null"]
+    },
+    "compensation_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "policy_labels": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "details": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
