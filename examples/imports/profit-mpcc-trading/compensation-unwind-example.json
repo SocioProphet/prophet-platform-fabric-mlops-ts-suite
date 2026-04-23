@@ -1,0 +1,25 @@
+{
+  "event_id": "recon_evt_0002",
+  "scope_kind": "position",
+  "scope_ref": "acct_main:AAPL",
+  "status": "compensated",
+  "variance_kind": "overfill_correction",
+  "expected_value": {
+    "position": "100"
+  },
+  "observed_value": {
+    "position": "110"
+  },
+  "compensation_refs": [
+    "fx_comp_0002",
+    "exec_report_evt_0009"
+  ],
+  "policy_labels": [
+    "requires_posttrade_audit",
+    "compensation_applied"
+  ],
+  "recorded_at": "2026-04-15T16:08:00Z",
+  "details": {
+    "note": "example unwind path after reconciliation discovered an overfill"
+  }
+}
