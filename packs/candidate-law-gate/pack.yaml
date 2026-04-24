@@ -1,0 +1,15 @@
+pack_id: candidate-law-gate
+version: 0.0.1
+purpose: bounded promotion from candidate law to soft rule or constraint
+requires:
+  - dimensional_consistency == pass
+  - holdout_generalization == pass
+  - complexity_within_budget
+  - counterexample_search_completed
+  - constraint_witnesses_present
+  - methodology_snapshot_present
+decision:
+  - promote_to_soft_rule
+  - promote_to_constraint
+  - hold
+  - reject
