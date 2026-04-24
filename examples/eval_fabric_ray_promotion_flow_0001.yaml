@@ -1,0 +1,30 @@
+flow_id: eval_fabric_ray_promotion_flow_0001
+version: 0.0.1
+recipe_ref: recipe://benchmark/ray/eval-fabric-001
+lifecycle:
+  - ray_data_prepare
+  - ray_train_fit
+  - ray_tune_search
+  - benchmark_evaluate
+  - ray_serve_promote
+ray_job:
+  emits:
+    training_run_id: run://ray/train/0001
+    benchmark_report_ref: artifact://benchmark/report/0001
+    model_artifact_ref: artifact://model/checkpoint/0001
+ray_service:
+  emits:
+    serving_target_ref: service://ray-serve/eval-fabric
+    promoted_model_version_ref: model://model.semantic-stack.2026-04-05
+    rollout_status_ref: rollout://ray-serve/0001
+promotion_path:
+  promotion_decision_ref: promotion_decision://0001
+  rollback_record_ref: rollback_record://0001
+  required_semantic_refs:
+    - benchmark_report
+    - promotion_decision
+    - rollback_record
+    - event_envelope
+    - evidence_receipt
+notes:
+  - This example shows the minimum flow-level refs needed to stay compatible with downstream eval-fabric lifecycle semantics.
