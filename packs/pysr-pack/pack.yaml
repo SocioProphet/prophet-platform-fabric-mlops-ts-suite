@@ -1,0 +1,21 @@
+pack_id: pysr-pack
+version: 0.0.1
+purpose: candidate law discovery
+engine:
+  family: pysr
+inputs:
+  - dataset_version
+  - target_quantity_ref
+  - feature_binding_set
+  - operator_grammar
+  - unit_constraints
+outputs:
+  - equation_candidate[]
+  - counterexample[]
+  - evidence_packet
+gates:
+  - dimensional_consistency_gate
+  - holdout_generalization_gate
+  - complexity_gate
+  - counterexample_gate
+  - ontology_binding_gate
