@@ -1,0 +1,20 @@
+pack_id: psl-pack
+version: 0.0.1
+purpose: probabilistic relational belief update
+engine:
+  family: psl
+inputs:
+  - grounded_assertion[]
+  - observation_record[]
+  - rule_template_set
+  - predicate_schema
+outputs:
+  - belief_state
+  - weighted_rule_set
+  - hypothesis[]
+  - constraint_witness[]
+gates:
+  - calibration_gate
+  - evidence_completeness_gate
+  - ontology_alignment_gate
+  - contradiction_budget_gate
