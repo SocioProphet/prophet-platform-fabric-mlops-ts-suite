@@ -1,0 +1,33 @@
+artifact_contract_id: eval_fabric_ray_artifacts_0001
+version: 0.0.1
+ray_job:
+  kind: RayJob
+  emits:
+    - dataset_version_ref
+    - training_run_id
+    - tuning_search_id
+    - benchmark_report_ref
+    - model_artifact_ref
+ray_service:
+  kind: RayService
+  emits:
+    - serving_target_ref
+    - promoted_model_version_ref
+    - rollout_status_ref
+    - rollback_readiness_ref
+eval_fabric_compatibility:
+  required_semantic_refs:
+    - benchmark_report
+    - promotion_decision
+    - rollback_record
+    - event_envelope
+    - evidence_receipt
+  lifecycle_names:
+    - ray_data_prepare
+    - ray_train_fit
+    - ray_tune_search
+    - benchmark_evaluate
+    - ray_serve_promote
+notes:
+  - This example does not prescribe file layout.
+  - It defines the minimal semantic references needed for compatibility with the downstream eval-fabric runtime and suite expectations.
