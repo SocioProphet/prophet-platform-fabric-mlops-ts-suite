@@ -1,0 +1,14 @@
+pack_id: human-twin-boundary-gate
+version: 0.0.1
+purpose: enforce consent-bound, bounded human digital twin usage
+requires:
+  - subject_is_moral_authorization_anchor
+  - consent_envelope_present
+  - purpose_within_allowed_purposes
+  - projection_is_bounded
+  - memory_and_cognition_typed
+  - export_policy_satisfied
+decision:
+  - allow_projection
+  - restrict_projection
+  - revoke_projection

@@ -1,0 +1,13 @@
+pack_id: belief-to-ontology-gate
+version: 0.0.1
+purpose: bounded promotion from believed truth to semantic plane
+requires:
+  - calibration_above_threshold
+  - hard_constraint_violations == 0
+  - contradiction_budget_within_policy
+  - ontology_binding_reviewed
+  - methodology_snapshot_present
+decision:
+  - promote_to_asserted_truth
+  - hold
+  - reject
