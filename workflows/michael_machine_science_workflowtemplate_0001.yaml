@@ -3,9 +3,23 @@ kind: WorkflowTemplate
 metadata:
   name: michael-machine-science-0001
 spec:
+  arguments:
+    parameters:
+      - name: dataset_version
+      - name: target_quantity_ref
+      - name: subject_ref
+      - name: consent_envelope_ref
+      - name: projection_bounds_ref
   entrypoint: michael-machine-science
   templates:
     - name: michael-machine-science
+      inputs:
+        parameters:
+          - name: dataset_version
+          - name: target_quantity_ref
+          - name: subject_ref
+          - name: consent_envelope_ref
+          - name: projection_bounds_ref
       dag:
         tasks:
           - name: belief-update
@@ -14,6 +28,8 @@ spec:
               parameters:
                 - name: pack_ref
                   value: packs/psl-pack/pack.yaml
+                - name: context_json
+                  value: '{"dataset_version":"{{inputs.parameters.dataset_version}}","subject_ref":"{{inputs.parameters.subject_ref}}"}'
           - name: belief-promotion-gate
             dependencies: [belief-update]
             template: pack-step
@@ -21,6 +37,8 @@ spec:
               parameters:
                 - name: pack_ref
                   value: packs/belief-to-ontology-gate/pack.yaml
+                - name: context_json
+                  value: '{"subject_ref":"{{inputs.parameters.subject_ref}}"}'
           - name: candidate-law-discovery
             dependencies: [belief-update]
             template: pack-step
@@ -28,6 +46,8 @@ spec:
               parameters:
                 - name: pack_ref
                   value: packs/pysr-pack/pack.yaml
+                - name: context_json
+                  value: '{"dataset_version":"{{inputs.parameters.dataset_version}}","target_quantity_ref":"{{inputs.parameters.target_quantity_ref}}"}'
           - name: candidate-law-promotion-gate
             dependencies: [candidate-law-discovery]
             template: pack-step
@@ -35,6 +55,8 @@ spec:
               parameters:
                 - name: pack_ref
                   value: packs/candidate-law-gate/pack.yaml
+                - name: context_json
+                  value: '{"target_quantity_ref":"{{inputs.parameters.target_quantity_ref}}"}'
           - name: human-twin-boundary-gate
             dependencies: [belief-update]
             template: pack-step
@@ -42,14 +64,18 @@ spec:
               parameters:
                 - name: pack_ref
                   value: packs/human-twin-boundary-gate/pack.yaml
+                - name: context_json
+                  value: '{"subject_ref":"{{inputs.parameters.subject_ref}}","consent_envelope_ref":"{{inputs.parameters.consent_envelope_ref}}","projection_bounds_ref":"{{inputs.parameters.projection_bounds_ref}}"}'
     - name: pack-step
       inputs:
         parameters:
           - name: pack_ref
+          - name: context_json
       container:
         image: alpine:3.20
         command: [sh, -lc]
         args:
           - |
             echo "stub workflow template consuming ${pack_ref}";
+            echo "context: ${context_json}";
             echo "Replace this template with the actual controller/executor once the pack runtime is selected.";
