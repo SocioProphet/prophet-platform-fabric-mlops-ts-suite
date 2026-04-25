@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: michael-machine-science-
+spec:
+  workflowTemplateRef:
+    name: michael-machine-science-0001
+  arguments:
+    parameters:
+      - name: dataset_version
+        value: dataset://bars/v2026-04-25T00:00:00Z
+      - name: target_quantity_ref
+        value: quantity://human/0001/biomarker
+      - name: subject_ref
+        value: subject://human/0001
+      - name: consent_envelope_ref
+        value: consent://human/0001
+      - name: projection_bounds_ref
+        value: projection://human/0001
