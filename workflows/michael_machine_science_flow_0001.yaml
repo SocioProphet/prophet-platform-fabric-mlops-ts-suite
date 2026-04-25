@@ -1,0 +1,67 @@
+flow_id: michael_machine_science_flow_0001
+version: 0.0.1
+purpose: governed machine-science flow for Michael using belief update, candidate-law discovery, and bounded promotion gates
+packs:
+  - ref: packs/psl-pack/pack.yaml
+    step_id: belief_update
+    inputs:
+      - grounded_assertion[]
+      - observation_record[]
+      - rule_template_set
+      - predicate_schema
+    outputs:
+      - belief_state
+      - weighted_rule_set
+      - hypothesis[]
+  - ref: packs/belief-to-ontology-gate/pack.yaml
+    step_id: belief_promotion_gate
+    inputs:
+      - belief_state
+      - methodology_snapshot
+      - evidence_packet
+    outputs:
+      - promotion_decision
+  - ref: packs/pysr-pack/pack.yaml
+    step_id: candidate_law_discovery
+    inputs:
+      - dataset_version
+      - target_quantity_ref
+      - feature_binding_set
+      - operator_grammar
+      - unit_constraints
+    outputs:
+      - equation_candidate[]
+      - counterexample[]
+      - evidence_packet
+  - ref: packs/candidate-law-gate/pack.yaml
+    step_id: candidate_law_promotion_gate
+    inputs:
+      - equation_candidate[]
+      - counterexample[]
+      - constraint_witness[]
+      - methodology_snapshot
+    outputs:
+      - promotion_decision
+  - ref: packs/human-twin-boundary-gate/pack.yaml
+    step_id: human_twin_boundary_gate
+    inputs:
+      - human_digital_twin_state
+      - consent_envelope
+      - projection_bounds
+    outputs:
+      - boundary_decision
+compatibility_refs:
+  - benchmark_report
+  - promotion_decision
+  - rollback_record
+  - event_envelope
+  - evidence_receipt
+lifecycle_names:
+  - ray_data_prepare
+  - ray_train_fit
+  - ray_tune_search
+  - benchmark_evaluate
+  - ray_serve_promote
+notes:
+  - This example is intentionally substrate-agnostic and does not prescribe a controller implementation.
+  - It defines the minimum pack-composition shape for Michael under the current standards and eval-fabric compatibility rules.
