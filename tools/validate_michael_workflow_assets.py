@@ -10,10 +10,14 @@ try:
 except Exception as exc:  # pragma: no cover
     raise SystemExit("PyYAML is required for validate_michael_workflow_assets.py") from exc
 
+from render_michael_machine_science_plan import render_plan
+from render_michael_machine_science_run_record import render_run_record
+
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = ROOT / "workflows" / "michael_machine_science_workflowtemplate_0001.yaml"
 SUBMISSION_PATH = ROOT / "workflows" / "michael_machine_science_submission_0001.yaml"
 PLAN_PATH = ROOT / "examples" / "michael_machine_science_plan_0001.json"
+RUN_RECORD_PATH = ROOT / "examples" / "michael_machine_science_run_record_0001.json"
 
 
 def _load_yaml(path: Path):
@@ -27,7 +31,10 @@ def _load_json(path: Path):
 def validate_assets() -> dict:
     template_doc = _load_yaml(TEMPLATE_PATH)
     submission_doc = _load_yaml(SUBMISSION_PATH)
-    plan_doc = _load_json(PLAN_PATH)
+    stored_plan_doc = _load_json(PLAN_PATH)
+    stored_run_record_doc = _load_json(RUN_RECORD_PATH)
+    rendered_plan_doc = render_plan(template_doc, submission_doc)
+    rendered_run_record_doc = render_run_record(template_doc, submission_doc)
 
     template_name = template_doc["metadata"]["name"]
     submission_template_ref = submission_doc["spec"]["workflowTemplateRef"]["name"]
@@ -47,8 +54,14 @@ def validate_assets() -> dict:
 
     missing_pack_refs = [ref for ref in pack_refs if not (ROOT / ref).exists()]
 
-    plan_step_ids = [step["step_id"] for step in plan_doc["resolved_steps"]]
+    plan_step_ids = [step["step_id"] for step in stored_plan_doc["resolved_steps"]]
+    rendered_plan_step_ids = [step["step_id"] for step in rendered_plan_doc["resolved_steps"]]
+    run_record_step_ids = [step["step_id"] for step in stored_run_record_doc["resolved_steps"]]
+    rendered_run_record_step_ids = [step["step_id"] for step in rendered_run_record_doc["resolved_steps"]]
     task_ids = [task["name"] for task in tasks]
+
+    plan_matches_rendered = stored_plan_doc == rendered_plan_doc
+    run_record_matches_rendered = stored_run_record_doc == rendered_run_record_doc
 
     return {
         "template_name": template_name,
@@ -59,13 +72,24 @@ def validate_assets() -> dict:
         "pack_refs": pack_refs,
         "missing_pack_refs": missing_pack_refs,
         "plan_step_ids": plan_step_ids,
+        "rendered_plan_step_ids": rendered_plan_step_ids,
+        "run_record_step_ids": run_record_step_ids,
+        "rendered_run_record_step_ids": rendered_run_record_step_ids,
         "task_ids": task_ids,
         "plan_matches_task_ids": plan_step_ids == task_ids,
+        "run_record_matches_task_ids": run_record_step_ids == task_ids,
+        "plan_matches_rendered": plan_matches_rendered,
+        "run_record_matches_rendered": run_record_matches_rendered,
         "ok": (
             submission_template_ref == template_name
             and not missing_pack_refs
             and not (set(template_params) - set(submission_params.keys()))
             and plan_step_ids == task_ids
+            and rendered_plan_step_ids == task_ids
+            and run_record_step_ids == task_ids
+            and rendered_run_record_step_ids == task_ids
+            and plan_matches_rendered
+            and run_record_matches_rendered
         ),
     }
 
