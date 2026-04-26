@@ -1,0 +1,26 @@
+{
+  "run_record_ref": "examples/michael_machine_science_run_record_0001.json",
+  "transitions": [
+    {
+      "from": "planned",
+      "to": "running",
+      "expected_lifecycle_phase": "execution",
+      "expected_step_status": "running",
+      "required_step_fields": ["started_at_ref"]
+    },
+    {
+      "from": "planned",
+      "to": "succeeded",
+      "expected_lifecycle_phase": "post-execution",
+      "expected_step_status": "succeeded",
+      "required_step_fields": ["completed_at_ref", "evidence_refs"]
+    },
+    {
+      "from": "planned",
+      "to": "failed",
+      "expected_lifecycle_phase": "post-execution",
+      "expected_step_status": "failed",
+      "required_step_fields": ["failed_at_ref", "failure_evidence_ref"]
+    }
+  ]
+}
