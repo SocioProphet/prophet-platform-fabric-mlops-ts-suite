@@ -10,6 +10,7 @@ try:
 except Exception as exc:  # pragma: no cover
     raise SystemExit("PyYAML is required for validate_michael_workflow_assets.py") from exc
 
+from dry_run_michael_machine_science_workflow import dry_run
 from render_michael_machine_science_plan import render_plan
 from render_michael_machine_science_run_record import render_run_record
 from render_michael_machine_science_status_transition import transition_run_record
@@ -20,6 +21,7 @@ SUBMISSION_PATH = ROOT / "workflows" / "michael_machine_science_submission_0001.
 PLAN_PATH = ROOT / "examples" / "michael_machine_science_plan_0001.json"
 RUN_RECORD_PATH = ROOT / "examples" / "michael_machine_science_run_record_0001.json"
 STATUS_TRANSITIONS_PATH = ROOT / "examples" / "michael_machine_science_status_transitions_0001.json"
+DRY_RUN_PATH = ROOT / "examples" / "michael_machine_science_dry_run_0001.json"
 
 
 def _load_yaml(path: Path):
@@ -70,8 +72,10 @@ def validate_assets() -> dict:
     stored_plan_doc = _load_json(PLAN_PATH)
     stored_run_record_doc = _load_json(RUN_RECORD_PATH)
     status_transition_expectations = _load_json(STATUS_TRANSITIONS_PATH)
+    stored_dry_run_doc = _load_json(DRY_RUN_PATH)
     rendered_plan_doc = render_plan(template_doc, submission_doc)
     rendered_run_record_doc = render_run_record(template_doc, submission_doc)
+    rendered_dry_run_doc = dry_run(stored_run_record_doc)
 
     template_name = template_doc["metadata"]["name"]
     submission_template_ref = submission_doc["spec"]["workflowTemplateRef"]["name"]
@@ -101,6 +105,7 @@ def validate_assets() -> dict:
     run_record_matches_rendered = stored_run_record_doc == rendered_run_record_doc
     transition_reports = _validate_status_transitions(stored_run_record_doc, status_transition_expectations)
     transitions_ok = all(report["ok"] for report in transition_reports)
+    dry_run_matches_rendered = stored_dry_run_doc == rendered_dry_run_doc
 
     return {
         "template_name": template_name,
@@ -121,6 +126,7 @@ def validate_assets() -> dict:
         "run_record_matches_rendered": run_record_matches_rendered,
         "transition_reports": transition_reports,
         "transitions_ok": transitions_ok,
+        "dry_run_matches_rendered": dry_run_matches_rendered,
         "ok": (
             submission_template_ref == template_name
             and not missing_pack_refs
@@ -132,6 +138,7 @@ def validate_assets() -> dict:
             and plan_matches_rendered
             and run_record_matches_rendered
             and transitions_ok
+            and dry_run_matches_rendered
         ),
     }
 

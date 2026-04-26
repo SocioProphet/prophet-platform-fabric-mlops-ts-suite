@@ -1,0 +1,64 @@
+{
+  "dry_run_id": "michael-machine-science-dry-run-0001",
+  "source_run_id": "michael-machine-science-run-0001",
+  "workflow_template": "michael-machine-science-0001",
+  "mode": "local-dry-run",
+  "transition_sequence": [
+    {
+      "target_status": "running",
+      "lifecycle_phase": "execution",
+      "transition": {
+        "from": "planned",
+        "to": "running",
+        "kind": "michael_machine_science_status_transition"
+      },
+      "step_count": 5,
+      "step_statuses": [
+        {"step_id": "belief-update", "status": "running", "expected_artifacts": ["belief_state", "weighted_rule_set", "hypothesis[]"], "evidence_refs": [], "failure_evidence_ref": null},
+        {"step_id": "belief-promotion-gate", "status": "running", "expected_artifacts": ["promotion_decision"], "evidence_refs": [], "failure_evidence_ref": null},
+        {"step_id": "candidate-law-discovery", "status": "running", "expected_artifacts": ["equation_candidate[]", "counterexample[]", "evidence_packet"], "evidence_refs": [], "failure_evidence_ref": null},
+        {"step_id": "candidate-law-promotion-gate", "status": "running", "expected_artifacts": ["promotion_decision"], "evidence_refs": [], "failure_evidence_ref": null},
+        {"step_id": "human-twin-boundary-gate", "status": "running", "expected_artifacts": ["boundary_decision"], "evidence_refs": [], "failure_evidence_ref": null}
+      ]
+    },
+    {
+      "target_status": "succeeded",
+      "lifecycle_phase": "post-execution",
+      "transition": {
+        "from": "planned",
+        "to": "succeeded",
+        "kind": "michael_machine_science_status_transition"
+      },
+      "step_count": 5,
+      "step_statuses": [
+        {"step_id": "belief-update", "status": "succeeded", "expected_artifacts": ["belief_state", "weighted_rule_set", "hypothesis[]"], "evidence_refs": ["evidence://belief-update/receipt"], "failure_evidence_ref": null},
+        {"step_id": "belief-promotion-gate", "status": "succeeded", "expected_artifacts": ["promotion_decision"], "evidence_refs": ["evidence://belief-promotion-gate/receipt"], "failure_evidence_ref": null},
+        {"step_id": "candidate-law-discovery", "status": "succeeded", "expected_artifacts": ["equation_candidate[]", "counterexample[]", "evidence_packet"], "evidence_refs": ["evidence://candidate-law-discovery/receipt"], "failure_evidence_ref": null},
+        {"step_id": "candidate-law-promotion-gate", "status": "succeeded", "expected_artifacts": ["promotion_decision"], "evidence_refs": ["evidence://candidate-law-promotion-gate/receipt"], "failure_evidence_ref": null},
+        {"step_id": "human-twin-boundary-gate", "status": "succeeded", "expected_artifacts": ["boundary_decision"], "evidence_refs": ["evidence://human-twin-boundary-gate/receipt"], "failure_evidence_ref": null}
+      ]
+    },
+    {
+      "target_status": "failed",
+      "lifecycle_phase": "post-execution",
+      "transition": {
+        "from": "planned",
+        "to": "failed",
+        "kind": "michael_machine_science_status_transition"
+      },
+      "step_count": 5,
+      "step_statuses": [
+        {"step_id": "belief-update", "status": "failed", "expected_artifacts": ["belief_state", "weighted_rule_set", "hypothesis[]"], "evidence_refs": [], "failure_evidence_ref": "evidence://belief-update/failure"},
+        {"step_id": "belief-promotion-gate", "status": "failed", "expected_artifacts": ["promotion_decision"], "evidence_refs": [], "failure_evidence_ref": "evidence://belief-promotion-gate/failure"},
+        {"step_id": "candidate-law-discovery", "status": "failed", "expected_artifacts": ["equation_candidate[]", "counterexample[]", "evidence_packet"], "evidence_refs": [], "failure_evidence_ref": "evidence://candidate-law-discovery/failure"},
+        {"step_id": "candidate-law-promotion-gate", "status": "failed", "expected_artifacts": ["promotion_decision"], "evidence_refs": [], "failure_evidence_ref": "evidence://candidate-law-promotion-gate/failure"},
+        {"step_id": "human-twin-boundary-gate", "status": "failed", "expected_artifacts": ["boundary_decision"], "evidence_refs": [], "failure_evidence_ref": "evidence://human-twin-boundary-gate/failure"}
+      ]
+    }
+  ],
+  "summary": {
+    "transition_count": 3,
+    "final_nominal_status": "succeeded",
+    "failure_branch_present": true
+  }
+}
