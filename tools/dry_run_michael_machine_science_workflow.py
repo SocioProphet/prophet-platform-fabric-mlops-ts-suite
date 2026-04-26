@@ -12,29 +12,38 @@ def _load_json(path: Path):
     return json.loads(path.read_text())
 
 
+def _summarize_transition(record: dict) -> dict:
+    return {
+        "target_status": record["status"],
+        "lifecycle_phase": record["lifecycle_phase"],
+        "transition": record["transition"],
+        "step_count": len(record["resolved_steps"]),
+        "step_statuses": [
+            {
+                "step_id": step["step_id"],
+                "status": step["status"],
+                "expected_artifacts": step.get("expected_artifacts", []),
+                "evidence_refs": step.get("evidence_refs", []),
+                "failure_evidence_ref": step.get("failure_evidence_ref"),
+            }
+            for step in record["resolved_steps"]
+        ],
+    }
+
+
 def dry_run(run_record: dict) -> dict:
-    running = transition_run_record(run_record, "running")
-    succeeded = transition_run_record(run_record, "succeeded")
-    failed = transition_run_record(run_record, "failed")
+    transitions = [
+        transition_run_record(run_record, "running"),
+        transition_run_record(run_record, "succeeded"),
+        transition_run_record(run_record, "failed"),
+    ]
 
     return {
         "dry_run_id": "michael-machine-science-dry-run-0001",
         "source_run_id": run_record["run_id"],
+        "workflow_template": run_record["workflow_template"],
         "mode": "local-dry-run",
-        "transition_sequence": [
-            {
-                "target_status": "running",
-                "record": running,
-            },
-            {
-                "target_status": "succeeded",
-                "record": succeeded,
-            },
-            {
-                "target_status": "failed",
-                "record": failed,
-            },
-        ],
+        "transition_sequence": [_summarize_transition(record) for record in transitions],
         "summary": {
             "transition_count": 3,
             "final_nominal_status": "succeeded",
