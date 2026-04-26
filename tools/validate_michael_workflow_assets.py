@@ -12,12 +12,14 @@ except Exception as exc:  # pragma: no cover
 
 from render_michael_machine_science_plan import render_plan
 from render_michael_machine_science_run_record import render_run_record
+from render_michael_machine_science_status_transition import transition_run_record
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = ROOT / "workflows" / "michael_machine_science_workflowtemplate_0001.yaml"
 SUBMISSION_PATH = ROOT / "workflows" / "michael_machine_science_submission_0001.yaml"
 PLAN_PATH = ROOT / "examples" / "michael_machine_science_plan_0001.json"
 RUN_RECORD_PATH = ROOT / "examples" / "michael_machine_science_run_record_0001.json"
+STATUS_TRANSITIONS_PATH = ROOT / "examples" / "michael_machine_science_status_transitions_0001.json"
 
 
 def _load_yaml(path: Path):
@@ -28,11 +30,46 @@ def _load_json(path: Path):
     return json.loads(path.read_text())
 
 
+def _validate_status_transitions(run_record: dict, expectations: dict) -> list[dict]:
+    reports = []
+    for transition in expectations["transitions"]:
+        target = transition["to"]
+        rendered = transition_run_record(run_record, target)
+        required_fields = transition.get("required_step_fields", [])
+        step_reports = []
+        for step in rendered["resolved_steps"]:
+            missing_fields = [field for field in required_fields if field not in step]
+            step_reports.append(
+                {
+                    "step_id": step["step_id"],
+                    "status_matches": step["status"] == transition["expected_step_status"],
+                    "missing_required_fields": missing_fields,
+                }
+            )
+        reports.append(
+            {
+                "target_status": target,
+                "status_matches": rendered["status"] == target,
+                "phase_matches": rendered["lifecycle_phase"] == transition["expected_lifecycle_phase"],
+                "transition_matches": rendered["transition"] == {"from": transition["from"], "to": target, "kind": "michael_machine_science_status_transition"},
+                "step_reports": step_reports,
+                "ok": (
+                    rendered["status"] == target
+                    and rendered["lifecycle_phase"] == transition["expected_lifecycle_phase"]
+                    and rendered["transition"] == {"from": transition["from"], "to": target, "kind": "michael_machine_science_status_transition"}
+                    and all(step_report["status_matches"] and not step_report["missing_required_fields"] for step_report in step_reports)
+                ),
+            }
+        )
+    return reports
+
+
 def validate_assets() -> dict:
     template_doc = _load_yaml(TEMPLATE_PATH)
     submission_doc = _load_yaml(SUBMISSION_PATH)
     stored_plan_doc = _load_json(PLAN_PATH)
     stored_run_record_doc = _load_json(RUN_RECORD_PATH)
+    status_transition_expectations = _load_json(STATUS_TRANSITIONS_PATH)
     rendered_plan_doc = render_plan(template_doc, submission_doc)
     rendered_run_record_doc = render_run_record(template_doc, submission_doc)
 
@@ -62,6 +99,8 @@ def validate_assets() -> dict:
 
     plan_matches_rendered = stored_plan_doc == rendered_plan_doc
     run_record_matches_rendered = stored_run_record_doc == rendered_run_record_doc
+    transition_reports = _validate_status_transitions(stored_run_record_doc, status_transition_expectations)
+    transitions_ok = all(report["ok"] for report in transition_reports)
 
     return {
         "template_name": template_name,
@@ -80,6 +119,8 @@ def validate_assets() -> dict:
         "run_record_matches_task_ids": run_record_step_ids == task_ids,
         "plan_matches_rendered": plan_matches_rendered,
         "run_record_matches_rendered": run_record_matches_rendered,
+        "transition_reports": transition_reports,
+        "transitions_ok": transitions_ok,
         "ok": (
             submission_template_ref == template_name
             and not missing_pack_refs
@@ -90,6 +131,7 @@ def validate_assets() -> dict:
             and rendered_run_record_step_ids == task_ids
             and plan_matches_rendered
             and run_record_matches_rendered
+            and transitions_ok
         ),
     }
 
