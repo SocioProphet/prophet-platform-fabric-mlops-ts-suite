@@ -1,0 +1,43 @@
+{
+  "$id": "https://socioprophet.org/schema/michael/workflow_execution_record.v0.1.schema.json",
+  "type": "object",
+  "required": [
+    "kind",
+    "execution_record_id",
+    "source_run_id",
+    "workflow_template",
+    "mode",
+    "transition_sequence",
+    "summary"
+  ],
+  "properties": {
+    "kind": { "const": "michael_workflow_execution_record" },
+    "execution_record_id": { "type": "string" },
+    "source_run_id": { "type": "string" },
+    "workflow_template": { "type": "string" },
+    "mode": { "enum": ["local-dry-run", "controller-run"] },
+    "transition_sequence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_status", "lifecycle_phase", "transition", "step_count", "step_statuses"],
+        "properties": {
+          "target_status": { "enum": ["running", "succeeded", "failed"] },
+          "lifecycle_phase": { "enum": ["execution", "post-execution"] },
+          "transition": { "type": "object" },
+          "step_count": { "type": "integer" },
+          "step_statuses": { "type": "array" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["transition_count", "final_nominal_status", "failure_branch_present"],
+      "properties": {
+        "transition_count": { "type": "integer" },
+        "final_nominal_status": { "enum": ["succeeded"] },
+        "failure_branch_present": { "type": "boolean" }
+      }
+    }
+  }
+}
