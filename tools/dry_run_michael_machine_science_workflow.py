@@ -7,6 +7,8 @@ from pathlib import Path
 
 from render_michael_machine_science_status_transition import transition_run_record
 
+SCHEMA_REF = "schemas/michael_workflow_execution_record.v0.1.schema.json"
+
 
 def _load_json(path: Path):
     return json.loads(path.read_text())
@@ -39,7 +41,9 @@ def dry_run(run_record: dict) -> dict:
     ]
 
     return {
-        "dry_run_id": "michael-machine-science-dry-run-0001",
+        "kind": "michael_workflow_execution_record",
+        "schema_ref": SCHEMA_REF,
+        "execution_record_id": "michael-machine-science-dry-run-0001",
         "source_run_id": run_record["run_id"],
         "workflow_template": run_record["workflow_template"],
         "mode": "local-dry-run",
