@@ -1,0 +1,43 @@
+name: michael-workflow-assets
+
+on:
+  pull_request:
+    paths:
+      - "packs/**"
+      - "workflows/michael_machine_science_*.yaml"
+      - "examples/michael_machine_science_plan_0001.json"
+      - "examples/michael_machine_science_run_record_0001.json"
+      - "tools/render_michael_machine_science_plan.py"
+      - "tools/render_michael_machine_science_run_record.py"
+      - "tools/validate_michael_workflow_assets.py"
+  workflow_dispatch:
+
+jobs:
+  validate-michael-workflow-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pyyaml
+
+      - name: Validate workflow assets
+        run: python tools/validate_michael_workflow_assets.py
+
+      - name: Render resolved plan
+        run: |
+          python tools/render_michael_machine_science_plan.py \
+            workflows/michael_machine_science_workflowtemplate_0001.yaml \
+            workflows/michael_machine_science_submission_0001.yaml
+
+      - name: Render run record
+        run: |
+          python tools/render_michael_machine_science_run_record.py \
+            workflows/michael_machine_science_workflowtemplate_0001.yaml \
+            workflows/michael_machine_science_submission_0001.yaml
