@@ -1,5 +1,7 @@
 {
-  "dry_run_id": "michael-machine-science-dry-run-0001",
+  "kind": "michael_workflow_execution_record",
+  "schema_ref": "schemas/michael_workflow_execution_record.v0.1.schema.json",
+  "execution_record_id": "michael-machine-science-dry-run-0001",
   "source_run_id": "michael-machine-science-run-0001",
   "workflow_template": "michael-machine-science-0001",
   "mode": "local-dry-run",
