@@ -1,0 +1,70 @@
+{
+  "run_id": "michael-machine-science-run-0001",
+  "workflow_template": "michael-machine-science-0001",
+  "submission_name_prefix": "michael-machine-science-",
+  "parameters": {
+    "dataset_version": "dataset://bars/v2026-04-25T00:00:00Z",
+    "target_quantity_ref": "quantity://human/0001/biomarker",
+    "subject_ref": "subject://human/0001",
+    "consent_envelope_ref": "consent://human/0001",
+    "projection_bounds_ref": "projection://human/0001"
+  },
+  "status": "planned",
+  "lifecycle_phase": "pre-execution",
+  "step_count": 5,
+  "resolved_steps": [
+    {
+      "step_id": "belief-update",
+      "template": "pack-step",
+      "dependencies": [],
+      "pack_ref": "packs/psl-pack/pack.yaml",
+      "context_json": "{\"dataset_version\":\"dataset://bars/v2026-04-25T00:00:00Z\",\"subject_ref\":\"subject://human/0001\"}",
+      "status": "planned",
+      "expected_artifacts": ["belief_state", "weighted_rule_set", "hypothesis[]"]
+    },
+    {
+      "step_id": "belief-promotion-gate",
+      "template": "pack-step",
+      "dependencies": ["belief-update"],
+      "pack_ref": "packs/belief-to-ontology-gate/pack.yaml",
+      "context_json": "{\"subject_ref\":\"subject://human/0001\"}",
+      "status": "planned",
+      "expected_artifacts": ["promotion_decision"]
+    },
+    {
+      "step_id": "candidate-law-discovery",
+      "template": "pack-step",
+      "dependencies": ["belief-update"],
+      "pack_ref": "packs/pysr-pack/pack.yaml",
+      "context_json": "{\"dataset_version\":\"dataset://bars/v2026-04-25T00:00:00Z\",\"target_quantity_ref\":\"quantity://human/0001/biomarker\"}",
+      "status": "planned",
+      "expected_artifacts": ["equation_candidate[]", "counterexample[]", "evidence_packet"]
+    },
+    {
+      "step_id": "candidate-law-promotion-gate",
+      "template": "pack-step",
+      "dependencies": ["candidate-law-discovery"],
+      "pack_ref": "packs/candidate-law-gate/pack.yaml",
+      "context_json": "{\"target_quantity_ref\":\"quantity://human/0001/biomarker\"}",
+      "status": "planned",
+      "expected_artifacts": ["promotion_decision"]
+    },
+    {
+      "step_id": "human-twin-boundary-gate",
+      "template": "pack-step",
+      "dependencies": ["belief-update"],
+      "pack_ref": "packs/human-twin-boundary-gate/pack.yaml",
+      "context_json": "{\"subject_ref\":\"subject://human/0001\",\"consent_envelope_ref\":\"consent://human/0001\",\"projection_bounds_ref\":\"projection://human/0001\"}",
+      "status": "planned",
+      "expected_artifacts": ["boundary_decision"]
+    }
+  ],
+  "artifact_expectations": {
+    "benchmark_report": "artifact://benchmark/report/pending",
+    "promotion_decisions": [
+      "promotion_decision://belief-promotion-gate",
+      "promotion_decision://candidate-law-promotion-gate"
+    ],
+    "rollback_record": "rollback_record://pending"
+  }
+}
