@@ -9,6 +9,7 @@ on:
       - "examples/michael_machine_science_run_record_0001.json"
       - "examples/michael_machine_science_status_transitions_0001.json"
       - "examples/michael_machine_science_dry_run_0001.json"
+      - "schemas/michael_workflow_execution_record.v0.1.schema.json"
       - "tools/render_michael_machine_science_plan.py"
       - "tools/render_michael_machine_science_run_record.py"
       - "tools/render_michael_machine_science_status_transition.py"

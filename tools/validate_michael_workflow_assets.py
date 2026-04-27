@@ -22,6 +22,7 @@ PLAN_PATH = ROOT / "examples" / "michael_machine_science_plan_0001.json"
 RUN_RECORD_PATH = ROOT / "examples" / "michael_machine_science_run_record_0001.json"
 STATUS_TRANSITIONS_PATH = ROOT / "examples" / "michael_machine_science_status_transitions_0001.json"
 DRY_RUN_PATH = ROOT / "examples" / "michael_machine_science_dry_run_0001.json"
+EXECUTION_SCHEMA_PATH = ROOT / "schemas" / "michael_workflow_execution_record.v0.1.schema.json"
 
 
 def _load_yaml(path: Path):
@@ -66,6 +67,30 @@ def _validate_status_transitions(run_record: dict, expectations: dict) -> list[d
     return reports
 
 
+def _validate_execution_record_shape(record: dict, schema: dict) -> dict:
+    missing_required = [field for field in schema["required"] if field not in record]
+    transition_statuses = [transition.get("target_status") for transition in record.get("transition_sequence", [])]
+    valid_transition_statuses = all(status in {"running", "succeeded", "failed"} for status in transition_statuses)
+    step_count_matches = all(
+        transition.get("step_count") == len(transition.get("step_statuses", []))
+        for transition in record.get("transition_sequence", [])
+    )
+    return {
+        "missing_required": missing_required,
+        "transition_statuses": transition_statuses,
+        "valid_transition_statuses": valid_transition_statuses,
+        "step_count_matches": step_count_matches,
+        "schema_ref_matches": record.get("schema_ref") == "schemas/michael_workflow_execution_record.v0.1.schema.json",
+        "ok": (
+            not missing_required
+            and valid_transition_statuses
+            and step_count_matches
+            and record.get("kind") == "michael_workflow_execution_record"
+            and record.get("schema_ref") == "schemas/michael_workflow_execution_record.v0.1.schema.json"
+        ),
+    }
+
+
 def validate_assets() -> dict:
     template_doc = _load_yaml(TEMPLATE_PATH)
     submission_doc = _load_yaml(SUBMISSION_PATH)
@@ -73,6 +98,7 @@ def validate_assets() -> dict:
     stored_run_record_doc = _load_json(RUN_RECORD_PATH)
     status_transition_expectations = _load_json(STATUS_TRANSITIONS_PATH)
     stored_dry_run_doc = _load_json(DRY_RUN_PATH)
+    execution_schema_doc = _load_json(EXECUTION_SCHEMA_PATH)
     rendered_plan_doc = render_plan(template_doc, submission_doc)
     rendered_run_record_doc = render_run_record(template_doc, submission_doc)
     rendered_dry_run_doc = dry_run(stored_run_record_doc)
@@ -106,6 +132,7 @@ def validate_assets() -> dict:
     transition_reports = _validate_status_transitions(stored_run_record_doc, status_transition_expectations)
     transitions_ok = all(report["ok"] for report in transition_reports)
     dry_run_matches_rendered = stored_dry_run_doc == rendered_dry_run_doc
+    execution_shape_report = _validate_execution_record_shape(stored_dry_run_doc, execution_schema_doc)
 
     return {
         "template_name": template_name,
@@ -127,6 +154,7 @@ def validate_assets() -> dict:
         "transition_reports": transition_reports,
         "transitions_ok": transitions_ok,
         "dry_run_matches_rendered": dry_run_matches_rendered,
+        "execution_shape_report": execution_shape_report,
         "ok": (
             submission_template_ref == template_name
             and not missing_pack_refs
@@ -139,6 +167,7 @@ def validate_assets() -> dict:
             and run_record_matches_rendered
             and transitions_ok
             and dry_run_matches_rendered
+            and execution_shape_report["ok"]
         ),
     }
 
