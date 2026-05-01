@@ -8,6 +8,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "examples" / "lattice_data_governai_execution_0001.json"
+RAY_RUNTIME_REF = "runtime-asset:prophet-ray-ml:0.1.0"
+BEAM_RUNTIME_REF = "runtime-asset:prophet-beam-dataops:0.1.0"
 
 REQUIRED_TOP_LEVEL = {
     "apiVersion",
@@ -16,6 +18,7 @@ REQUIRED_TOP_LEVEL = {
     "dataProductRef",
     "dataContractRef",
     "runtimeAssetRef",
+    "runtimeRefs",
     "policyRef",
     "rayJob",
     "beamPipeline",
@@ -52,7 +55,7 @@ def require_list(data: dict[str, Any], key: str) -> list[Any]:
 def validate_job(job: dict[str, Any], *, kind: str, engine: str, runtime_ref: str, data_product_ref: str) -> None:
     require(job.get("kind") == kind, f"{kind}: kind mismatch")
     require(job.get("engine") == engine, f"{kind}: engine mismatch")
-    require(job.get("runtimeEnvRef") == runtime_ref, f"{kind}: runtimeEnvRef must match fixture runtimeAssetRef")
+    require(job.get("runtimeEnvRef") == runtime_ref, f"{kind}: runtimeEnvRef must match role-specific RuntimeAsset")
     require(data_product_ref in require_list(job, "inputRefs"), f"{kind}: inputRefs must include DataProduct")
     require_string(job, "lineageRunRef")
     require(job.get("executionMode") == "dry-run", f"{kind}: executionMode must be dry-run")
@@ -63,11 +66,15 @@ def validate_job(job: dict[str, Any], *, kind: str, engine: str, runtime_ref: st
 def validate_platform_record(record: dict[str, Any]) -> None:
     require(record.get("kind") == "PlatformAssetRecord", "platform record kind must be PlatformAssetRecord")
     require_string(record, "assetId")
-    require_string(record, "assetKind")
+    asset_kind = require_string(record, "assetKind")
     require_string(record, "producerRepo")
     require(record.get("producerRepo") == "SocioProphet/prophet-platform-fabric-mlops-ts-suite", "producerRepo mismatch")
     surfaces = require_list(record, "compatibilitySurfaces")
     require(bool(surfaces), "compatibilitySurfaces must not be empty")
+    if asset_kind == "ray-job-dry-run":
+        require(record.get("runtimeRef") == RAY_RUNTIME_REF, "Ray platform record runtimeRef mismatch")
+    if asset_kind == "beam-pipeline-dry-run":
+        require(record.get("runtimeRef") == BEAM_RUNTIME_REF, "Beam platform record runtimeRef mismatch")
 
 
 def validate_fixture(data: dict[str, Any]) -> None:
@@ -82,32 +89,42 @@ def validate_fixture(data: dict[str, Any]) -> None:
     policy_ref = require_string(data, "policyRef")
     require(data_product_ref.startswith("urn:srcos:data-product:"), "dataProductRef must be SourceOS DataProduct URN")
     require(data_contract_ref.startswith("urn:srcos:data-contract:"), "dataContractRef must be SourceOS DataContract URN")
-    require(runtime_ref.startswith("runtime-asset:"), "runtimeAssetRef must reference RuntimeAsset")
+    require(runtime_ref == RAY_RUNTIME_REF, "top-level runtimeAssetRef must be Ray runtime for model evaluation")
     require(policy_ref.startswith("urn:srcos:policy:"), "policyRef must be SourceOS policy URN")
+    runtime_refs = data.get("runtimeRefs")
+    require(isinstance(runtime_refs, dict), "runtimeRefs must be object")
+    require(runtime_refs.get("rayRuntimeRef") == RAY_RUNTIME_REF, "runtimeRefs.rayRuntimeRef mismatch")
+    require(runtime_refs.get("beamRuntimeRef") == BEAM_RUNTIME_REF, "runtimeRefs.beamRuntimeRef mismatch")
 
     ray_job = data["rayJob"]
     beam_pipeline = data["beamPipeline"]
     require(isinstance(ray_job, dict), "rayJob must be object")
     require(isinstance(beam_pipeline, dict), "beamPipeline must be object")
-    validate_job(ray_job, kind="RayJobDryRunPlan", engine="ray-train", runtime_ref=runtime_ref, data_product_ref=data_product_ref)
-    validate_job(beam_pipeline, kind="BeamPipelineDryRunPlan", engine="apache-beam", runtime_ref=runtime_ref, data_product_ref=data_product_ref)
+    validate_job(ray_job, kind="RayJobDryRunPlan", engine="ray-train", runtime_ref=RAY_RUNTIME_REF, data_product_ref=data_product_ref)
+    validate_job(beam_pipeline, kind="BeamPipelineDryRunPlan", engine="apache-beam", runtime_ref=BEAM_RUNTIME_REF, data_product_ref=data_product_ref)
 
     lineage_runs = require_list(data, "lineageRuns")
     require(len(lineage_runs) == 2, "lineageRuns must include Ray and Beam runs")
-    lineage_ids = {require_string(run, "id") for run in lineage_runs if isinstance(run, dict)}
-    require(ray_job["lineageRunRef"] in lineage_ids, "Ray lineageRunRef missing from lineageRuns")
-    require(beam_pipeline["lineageRunRef"] in lineage_ids, "Beam lineageRunRef missing from lineageRuns")
+    lineage_by_id = {require_string(run, "id"): run for run in lineage_runs if isinstance(run, dict)}
+    require(ray_job["lineageRunRef"] in lineage_by_id, "Ray lineageRunRef missing from lineageRuns")
+    require(beam_pipeline["lineageRunRef"] in lineage_by_id, "Beam lineageRunRef missing from lineageRuns")
+    require(lineage_by_id[ray_job["lineageRunRef"]].get("runtimeRef") == RAY_RUNTIME_REF, "Ray lineage runtimeRef mismatch")
+    require(lineage_by_id[beam_pipeline["lineageRunRef"]].get("runtimeRef") == BEAM_RUNTIME_REF, "Beam lineage runtimeRef mismatch")
 
     evaluation = data["evaluationBundle"]
     require(isinstance(evaluation, dict), "evaluationBundle must be object")
-    require(evaluation.get("runtimeRef") == runtime_ref, "evaluationBundle.runtimeRef mismatch")
+    require(evaluation.get("runtimeRef") == RAY_RUNTIME_REF, "evaluationBundle.runtimeRef must be Ray runtime")
+    supporting = require_list(evaluation, "supportingRuntimeRefs")
+    require(BEAM_RUNTIME_REF in supporting, "evaluationBundle.supportingRuntimeRefs must include Beam runtime")
     require(data_product_ref in require_list(evaluation, "inputRefs"), "evaluationBundle.inputRefs must include DataProduct")
     require(evaluation.get("verdict") in {"approved", "rejected", "needs-review", "blocked", "informational"}, "invalid evaluation verdict")
 
     gate = data["promotionGate"]
     require(isinstance(gate, dict), "promotionGate must be object")
     require(gate.get("state") in {"approved", "rejected", "needs-review", "blocked", "informational"}, "invalid promotion gate state")
-    require(bool(require_list(gate, "requires")), "promotionGate.requires must not be empty")
+    requirements = require_list(gate, "requires")
+    require(any("Ray RuntimeAsset" in item for item in requirements), "promotionGate must require Ray RuntimeAsset evidence")
+    require(any("Beam RuntimeAsset" in item for item in requirements), "promotionGate must require Beam RuntimeAsset evidence")
 
     records = require_list(data, "platformAssetRecords")
     require(len(records) >= 2, "platformAssetRecords must include Ray and Beam records")
