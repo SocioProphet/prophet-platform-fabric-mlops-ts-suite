@@ -1,0 +1,140 @@
+{
+  "apiVersion": "mlops.socioprophet.dev/v1",
+  "kind": "LatticeGovernedExecutionFixture",
+  "fixtureId": "lattice-governed-execution-0001",
+  "description": "Dry-run fixture showing DataProduct and RuntimeAsset flowing through governed Ray and Beam execution with lineage and evaluation evidence.",
+  "sourceRefs": {
+    "umbrellaIssue": "SocioProphet/prophet-platform#291",
+    "verticalFixtureIssue": "SocioProphet/prophet-platform#292",
+    "schemaPullRequest": "SourceOS-Linux/sourceos-spec#75",
+    "runtimePullRequest": "SocioProphet/lattice-forge#10"
+  },
+  "dataProductRef": "urn:srcos:data-product:community_truth_demo",
+  "dataContractRef": "urn:srcos:data-contract:community_truth_demo",
+  "runtimeAssetRef": "runtime-asset:prophet-python-ml:0.1.0",
+  "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
+  "rayJob": {
+    "kind": "RayJobDryRunPlan",
+    "jobId": "rayjob:community-truth-demo-train:0001",
+    "engine": "ray-train",
+    "runtimeEnvRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "entrypoint": "python -m prophet_mlops.demo.train --data-product urn:srcos:data-product:community_truth_demo",
+    "inputRefs": [
+      "urn:srcos:data-product:community_truth_demo",
+      "urn:srcos:dataset:community_truth_demo_training"
+    ],
+    "outputRefs": [
+      "urn:srcos:model:community_truth_demo_candidate",
+      "urn:srcos:artifact:community_truth_demo_ray_metrics"
+    ],
+    "lineageRunRef": "urn:srcos:lineage-run:ray-community-truth-demo-0001",
+    "executionMode": "dry-run",
+    "network": "none",
+    "secrets": "none"
+  },
+  "beamPipeline": {
+    "kind": "BeamPipelineDryRunPlan",
+    "pipelineId": "beam:community-truth-demo-quality:0001",
+    "engine": "apache-beam",
+    "runner": "direct",
+    "runtimeEnvRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "entrypoint": "python -m prophet_mlops.demo.quality --data-product urn:srcos:data-product:community_truth_demo",
+    "inputRefs": [
+      "urn:srcos:data-product:community_truth_demo",
+      "urn:srcos:annotation-set:community_truth_demo_labels"
+    ],
+    "outputRefs": [
+      "urn:srcos:quality-profile:community_truth_demo",
+      "urn:srcos:artifact:community_truth_demo_beam_quality"
+    ],
+    "lineageRunRef": "urn:srcos:lineage-run:beam-community-truth-demo-0001",
+    "executionMode": "dry-run",
+    "network": "none",
+    "secrets": "none"
+  },
+  "lineageRuns": [
+    {
+      "id": "urn:srcos:lineage-run:ray-community-truth-demo-0001",
+      "jobRef": "rayjob:community-truth-demo-train:0001",
+      "engine": "ray-train",
+      "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
+      "outputRefs": ["urn:srcos:model:community_truth_demo_candidate"],
+      "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+      "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001"
+    },
+    {
+      "id": "urn:srcos:lineage-run:beam-community-truth-demo-0001",
+      "jobRef": "beam:community-truth-demo-quality:0001",
+      "engine": "apache-beam",
+      "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
+      "outputRefs": ["urn:srcos:quality-profile:community_truth_demo"],
+      "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+      "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001"
+    }
+  ],
+  "evaluationBundle": {
+    "id": "urn:srcos:evaluation-bundle:community_truth_demo_model_eval",
+    "subjectRef": "urn:srcos:model:community_truth_demo_candidate",
+    "evaluationKind": "model",
+    "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
+    "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "verdict": "needs-review",
+    "riskTier": "medium",
+    "metrics": [
+      {"name": "factuality_f1", "value": 0.84, "status": "pass"},
+      {"name": "grounding_precision", "value": 0.78, "status": "warn"}
+    ],
+    "evidenceRefs": [
+      "urn:srcos:evidence:ray-community-truth-demo-0001",
+      "urn:srcos:evidence:beam-community-truth-demo-0001"
+    ]
+  },
+  "promotionGate": {
+    "gateId": "promotion-gate:community-truth-demo-model",
+    "state": "needs-review",
+    "requires": [
+      "DataProduct contract valid",
+      "RuntimeAsset evidence present",
+      "Ray lineage present",
+      "Beam quality lineage present",
+      "EvaluationBundle verdict not blocked"
+    ],
+    "approvalWorkflowRef": "urn:srcos:workflow:model-review-demo"
+  },
+  "platformAssetRecords": [
+    {
+      "apiVersion": "prophet.socioprophet.dev/v1",
+      "kind": "PlatformAssetRecord",
+      "assetId": "rayjob:community-truth-demo-train:0001",
+      "assetKind": "ray-job-dry-run",
+      "name": "community truth demo Ray Train dry run",
+      "version": "0.1.0",
+      "sourceKind": "RayJobDryRunPlan",
+      "producerRepo": "SocioProphet/prophet-platform-fabric-mlops-ts-suite",
+      "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
+      "evidenceCorrelationId": "urn:srcos:evidence:ray-community-truth-demo-0001",
+      "promotionChannel": "lattice-data-governai-demo",
+      "compatibilitySurfaces": ["ray", "lattice-studio", "model-zoo", "agentplane", "policy-fabric"]
+    },
+    {
+      "apiVersion": "prophet.socioprophet.dev/v1",
+      "kind": "PlatformAssetRecord",
+      "assetId": "beam:community-truth-demo-quality:0001",
+      "assetKind": "beam-pipeline-dry-run",
+      "name": "community truth demo Beam quality dry run",
+      "version": "0.1.0",
+      "sourceKind": "BeamPipelineDryRunPlan",
+      "producerRepo": "SocioProphet/prophet-platform-fabric-mlops-ts-suite",
+      "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
+      "evidenceCorrelationId": "urn:srcos:evidence:beam-community-truth-demo-0001",
+      "promotionChannel": "lattice-data-governai-demo",
+      "compatibilitySurfaces": ["beam", "lattice-studio", "data-quality", "policy-fabric"]
+    }
+  ],
+  "safety": {
+    "hostMutation": false,
+    "network": "none",
+    "secrets": "none",
+    "mode": "fixture-only"
+  }
+}

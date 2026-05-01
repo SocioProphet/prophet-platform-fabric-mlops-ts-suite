@@ -1,0 +1,24 @@
+name: lattice-governed-execution
+
+on:
+  pull_request:
+    paths:
+      - "examples/lattice_data_governai_execution_0001.json"
+      - "tools/validate_lattice_governed_execution.py"
+      - ".github/workflows/lattice-governed-execution.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-lattice-governed-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate governed execution fixture
+        run: python tools/validate_lattice_governed_execution.py
