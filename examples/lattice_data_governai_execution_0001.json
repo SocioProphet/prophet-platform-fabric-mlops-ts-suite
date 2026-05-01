@@ -2,31 +2,32 @@
   "apiVersion": "mlops.socioprophet.dev/v1",
   "kind": "LatticeGovernedExecutionFixture",
   "fixtureId": "lattice-governed-execution-0001",
-  "description": "Dry-run fixture showing DataProduct and RuntimeAsset flowing through governed Ray and Beam execution with lineage and evaluation evidence.",
+  "description": "Dry-run fixture showing DataProduct and role-specific RuntimeAssets flowing through governed Ray and Beam execution with lineage and evaluation evidence.",
   "sourceRefs": {
     "umbrellaIssue": "SocioProphet/prophet-platform#291",
     "verticalFixtureIssue": "SocioProphet/prophet-platform#292",
     "schemaPullRequest": "SourceOS-Linux/sourceos-spec#75",
-    "runtimePullRequest": "SocioProphet/lattice-forge#10"
+    "runtimePullRequest": "SocioProphet/lattice-forge#11",
+    "platformRuntimeCatalogPr": "SocioProphet/prophet-platform#306",
+    "agentplaneRuntimeRefsPr": "SocioProphet/agentplane#77",
+    "topologyRuntimePr": "SocioProphet/sociosphere#240"
   },
   "dataProductRef": "urn:srcos:data-product:community_truth_demo",
   "dataContractRef": "urn:srcos:data-contract:community_truth_demo",
-  "runtimeAssetRef": "runtime-asset:prophet-python-ml:0.1.0",
+  "runtimeAssetRef": "runtime-asset:prophet-ray-ml:0.1.0",
+  "runtimeRefs": {
+    "rayRuntimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+    "beamRuntimeRef": "runtime-asset:prophet-beam-dataops:0.1.0"
+  },
   "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
   "rayJob": {
     "kind": "RayJobDryRunPlan",
     "jobId": "rayjob:community-truth-demo-train:0001",
     "engine": "ray-train",
-    "runtimeEnvRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "runtimeEnvRef": "runtime-asset:prophet-ray-ml:0.1.0",
     "entrypoint": "python -m prophet_mlops.demo.train --data-product urn:srcos:data-product:community_truth_demo",
-    "inputRefs": [
-      "urn:srcos:data-product:community_truth_demo",
-      "urn:srcos:dataset:community_truth_demo_training"
-    ],
-    "outputRefs": [
-      "urn:srcos:model:community_truth_demo_candidate",
-      "urn:srcos:artifact:community_truth_demo_ray_metrics"
-    ],
+    "inputRefs": ["urn:srcos:data-product:community_truth_demo", "urn:srcos:dataset:community_truth_demo_training"],
+    "outputRefs": ["urn:srcos:model:community_truth_demo_candidate", "urn:srcos:artifact:community_truth_demo_ray_metrics"],
     "lineageRunRef": "urn:srcos:lineage-run:ray-community-truth-demo-0001",
     "executionMode": "dry-run",
     "network": "none",
@@ -37,16 +38,10 @@
     "pipelineId": "beam:community-truth-demo-quality:0001",
     "engine": "apache-beam",
     "runner": "direct",
-    "runtimeEnvRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "runtimeEnvRef": "runtime-asset:prophet-beam-dataops:0.1.0",
     "entrypoint": "python -m prophet_mlops.demo.quality --data-product urn:srcos:data-product:community_truth_demo",
-    "inputRefs": [
-      "urn:srcos:data-product:community_truth_demo",
-      "urn:srcos:annotation-set:community_truth_demo_labels"
-    ],
-    "outputRefs": [
-      "urn:srcos:quality-profile:community_truth_demo",
-      "urn:srcos:artifact:community_truth_demo_beam_quality"
-    ],
+    "inputRefs": ["urn:srcos:data-product:community_truth_demo", "urn:srcos:annotation-set:community_truth_demo_labels"],
+    "outputRefs": ["urn:srcos:quality-profile:community_truth_demo", "urn:srcos:artifact:community_truth_demo_beam_quality"],
     "lineageRunRef": "urn:srcos:lineage-run:beam-community-truth-demo-0001",
     "executionMode": "dry-run",
     "network": "none",
@@ -59,7 +54,7 @@
       "engine": "ray-train",
       "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
       "outputRefs": ["urn:srcos:model:community_truth_demo_candidate"],
-      "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
       "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001"
     },
     {
@@ -68,7 +63,7 @@
       "engine": "apache-beam",
       "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
       "outputRefs": ["urn:srcos:quality-profile:community_truth_demo"],
-      "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+      "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
       "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001"
     }
   ],
@@ -77,24 +72,23 @@
     "subjectRef": "urn:srcos:model:community_truth_demo_candidate",
     "evaluationKind": "model",
     "inputRefs": ["urn:srcos:data-product:community_truth_demo"],
-    "runtimeRef": "runtime-asset:prophet-python-ml:0.1.0",
+    "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+    "supportingRuntimeRefs": ["runtime-asset:prophet-beam-dataops:0.1.0"],
     "verdict": "needs-review",
     "riskTier": "medium",
     "metrics": [
       {"name": "factuality_f1", "value": 0.84, "status": "pass"},
       {"name": "grounding_precision", "value": 0.78, "status": "warn"}
     ],
-    "evidenceRefs": [
-      "urn:srcos:evidence:ray-community-truth-demo-0001",
-      "urn:srcos:evidence:beam-community-truth-demo-0001"
-    ]
+    "evidenceRefs": ["urn:srcos:evidence:ray-community-truth-demo-0001", "urn:srcos:evidence:beam-community-truth-demo-0001"]
   },
   "promotionGate": {
     "gateId": "promotion-gate:community-truth-demo-model",
     "state": "needs-review",
     "requires": [
       "DataProduct contract valid",
-      "RuntimeAsset evidence present",
+      "Ray RuntimeAsset evidence present",
+      "Beam RuntimeAsset evidence present",
       "Ray lineage present",
       "Beam quality lineage present",
       "EvaluationBundle verdict not blocked"
@@ -114,6 +108,7 @@
       "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
       "evidenceCorrelationId": "urn:srcos:evidence:ray-community-truth-demo-0001",
       "promotionChannel": "lattice-data-governai-demo",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
       "compatibilitySurfaces": ["ray", "lattice-studio", "model-zoo", "agentplane", "policy-fabric"]
     },
     {
@@ -128,6 +123,7 @@
       "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
       "evidenceCorrelationId": "urn:srcos:evidence:beam-community-truth-demo-0001",
       "promotionChannel": "lattice-data-governai-demo",
+      "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
       "compatibilitySurfaces": ["beam", "lattice-studio", "data-quality", "policy-fabric"]
     }
   ],
