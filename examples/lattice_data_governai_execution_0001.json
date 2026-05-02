@@ -2,7 +2,7 @@
   "apiVersion": "mlops.socioprophet.dev/v1",
   "kind": "LatticeGovernedExecutionFixture",
   "fixtureId": "lattice-governed-execution-0001",
-  "description": "Dry-run fixture showing DataProduct and role-specific RuntimeAssets flowing through governed Ray and Beam execution with lineage and evaluation evidence.",
+  "description": "Dry-run fixture showing DataProduct and role-specific RuntimeAssets flowing through governed Ray and Beam execution with lineage, metrics, receipts, and replayable evidence contracts.",
   "sourceRefs": {
     "umbrellaIssue": "SocioProphet/prophet-platform#291",
     "verticalFixtureIssue": "SocioProphet/prophet-platform#292",
@@ -10,7 +10,8 @@
     "runtimePullRequest": "SocioProphet/lattice-forge#11",
     "platformRuntimeCatalogPr": "SocioProphet/prophet-platform#306",
     "agentplaneRuntimeRefsPr": "SocioProphet/agentplane#77",
-    "topologyRuntimePr": "SocioProphet/sociosphere#240"
+    "topologyRuntimePr": "SocioProphet/sociosphere#240",
+    "runtimeProfileExecutionPr": "SocioProphet/prophet-platform-fabric-mlops-ts-suite#34"
   },
   "dataProductRef": "urn:srcos:data-product:community_truth_demo",
   "dataContractRef": "urn:srcos:data-contract:community_truth_demo",
@@ -47,6 +48,57 @@
     "network": "none",
     "secrets": "none"
   },
+  "expectedArtifacts": [
+    {
+      "artifactRef": "urn:srcos:artifact:community_truth_demo_ray_metrics",
+      "producerRef": "rayjob:community-truth-demo-train:0001",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+      "artifactKind": "metrics",
+      "mediaType": "application/json",
+      "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001",
+      "required": true
+    },
+    {
+      "artifactRef": "urn:srcos:artifact:community_truth_demo_beam_quality",
+      "producerRef": "beam:community-truth-demo-quality:0001",
+      "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
+      "artifactKind": "quality-profile",
+      "mediaType": "application/json",
+      "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001",
+      "required": true
+    },
+    {
+      "artifactRef": "urn:srcos:model:community_truth_demo_candidate",
+      "producerRef": "rayjob:community-truth-demo-train:0001",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+      "artifactKind": "model-candidate",
+      "mediaType": "application/vnd.socioprophet.model+json",
+      "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001",
+      "required": true
+    }
+  ],
+  "metricExpectations": {
+    "ray": {
+      "artifactRef": "urn:srcos:artifact:community_truth_demo_ray_metrics",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+      "requiredMetrics": [
+        {"name": "factuality_f1", "min": 0.8, "actual": 0.84, "status": "pass"},
+        {"name": "grounding_precision", "min": 0.8, "actual": 0.78, "status": "warn"},
+        {"name": "training_records", "min": 100, "actual": 128, "status": "pass"}
+      ],
+      "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001"
+    },
+    "beam": {
+      "artifactRef": "urn:srcos:artifact:community_truth_demo_beam_quality",
+      "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
+      "requiredMetrics": [
+        {"name": "quality_completeness", "min": 0.95, "actual": 0.97, "status": "pass"},
+        {"name": "annotation_coverage", "min": 0.8, "actual": 0.86, "status": "pass"},
+        {"name": "duplicate_rate", "max": 0.03, "actual": 0.02, "status": "pass"}
+      ],
+      "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001"
+    }
+  },
   "lineageRuns": [
     {
       "id": "urn:srcos:lineage-run:ray-community-truth-demo-0001",
@@ -67,6 +119,52 @@
       "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001"
     }
   ],
+  "lineageReceipts": [
+    {
+      "receiptId": "urn:srcos:lineage-receipt:ray-community-truth-demo-0001",
+      "lineageRunRef": "urn:srcos:lineage-run:ray-community-truth-demo-0001",
+      "jobRef": "rayjob:community-truth-demo-train:0001",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+      "inputDigestRefs": ["sha256:data-product-community-truth-demo"],
+      "outputDigestRefs": ["sha256:model-community-truth-demo-candidate", "sha256:ray-metrics-community-truth-demo"],
+      "evidenceRef": "urn:srcos:evidence:ray-community-truth-demo-0001",
+      "replayable": true
+    },
+    {
+      "receiptId": "urn:srcos:lineage-receipt:beam-community-truth-demo-0001",
+      "lineageRunRef": "urn:srcos:lineage-run:beam-community-truth-demo-0001",
+      "jobRef": "beam:community-truth-demo-quality:0001",
+      "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
+      "inputDigestRefs": ["sha256:data-product-community-truth-demo", "sha256:annotation-set-community-truth-demo"],
+      "outputDigestRefs": ["sha256:quality-profile-community-truth-demo", "sha256:beam-quality-community-truth-demo"],
+      "evidenceRef": "urn:srcos:evidence:beam-community-truth-demo-0001",
+      "replayable": true
+    }
+  ],
+  "replayEvidenceBundle": {
+    "bundleId": "urn:srcos:evidence-bundle:lattice-governed-execution-0001",
+    "kind": "ReplayEvidenceBundle",
+    "mode": "dry-run",
+    "runtimeRefs": ["runtime-asset:prophet-ray-ml:0.1.0", "runtime-asset:prophet-beam-dataops:0.1.0"],
+    "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
+    "artifactRefs": [
+      "urn:srcos:artifact:community_truth_demo_ray_metrics",
+      "urn:srcos:artifact:community_truth_demo_beam_quality",
+      "urn:srcos:model:community_truth_demo_candidate"
+    ],
+    "lineageReceiptRefs": [
+      "urn:srcos:lineage-receipt:ray-community-truth-demo-0001",
+      "urn:srcos:lineage-receipt:beam-community-truth-demo-0001"
+    ],
+    "evidenceRefs": ["urn:srcos:evidence:ray-community-truth-demo-0001", "urn:srcos:evidence:beam-community-truth-demo-0001"],
+    "replayCommandRefs": [
+      "/lattice mlops ray run community_truth_demo --runtime prophet-ray-ml --dry-run",
+      "/lattice dataops beam run community_truth_demo --runtime prophet-beam-dataops --dry-run"
+    ],
+    "network": "none",
+    "secrets": "none",
+    "hostMutation": false
+  },
   "evaluationBundle": {
     "id": "urn:srcos:evaluation-bundle:community_truth_demo_model_eval",
     "subjectRef": "urn:srcos:model:community_truth_demo_candidate",
@@ -78,9 +176,12 @@
     "riskTier": "medium",
     "metrics": [
       {"name": "factuality_f1", "value": 0.84, "status": "pass"},
-      {"name": "grounding_precision", "value": 0.78, "status": "warn"}
+      {"name": "grounding_precision", "value": 0.78, "status": "warn"},
+      {"name": "quality_completeness", "value": 0.97, "status": "pass"},
+      {"name": "annotation_coverage", "value": 0.86, "status": "pass"}
     ],
-    "evidenceRefs": ["urn:srcos:evidence:ray-community-truth-demo-0001", "urn:srcos:evidence:beam-community-truth-demo-0001"]
+    "evidenceRefs": ["urn:srcos:evidence:ray-community-truth-demo-0001", "urn:srcos:evidence:beam-community-truth-demo-0001"],
+    "replayEvidenceBundleRef": "urn:srcos:evidence-bundle:lattice-governed-execution-0001"
   },
   "promotionGate": {
     "gateId": "promotion-gate:community-truth-demo-model",
@@ -89,8 +190,11 @@
       "DataProduct contract valid",
       "Ray RuntimeAsset evidence present",
       "Beam RuntimeAsset evidence present",
-      "Ray lineage present",
-      "Beam quality lineage present",
+      "Ray metrics artifact present",
+      "Beam quality artifact present",
+      "Ray lineage receipt present",
+      "Beam lineage receipt present",
+      "ReplayEvidenceBundle present",
       "EvaluationBundle verdict not blocked"
     ],
     "approvalWorkflowRef": "urn:srcos:workflow:model-review-demo"
@@ -125,6 +229,21 @@
       "promotionChannel": "lattice-data-governai-demo",
       "runtimeRef": "runtime-asset:prophet-beam-dataops:0.1.0",
       "compatibilitySurfaces": ["beam", "lattice-studio", "data-quality", "policy-fabric"]
+    },
+    {
+      "apiVersion": "prophet.socioprophet.dev/v1",
+      "kind": "PlatformAssetRecord",
+      "assetId": "urn:srcos:evidence-bundle:lattice-governed-execution-0001",
+      "assetKind": "replay-evidence-bundle",
+      "name": "Lattice governed execution replay evidence bundle",
+      "version": "0.1.0",
+      "sourceKind": "ReplayEvidenceBundle",
+      "producerRepo": "SocioProphet/prophet-platform-fabric-mlops-ts-suite",
+      "policyRef": "urn:srcos:policy:mlops-governed-execution-demo",
+      "evidenceCorrelationId": "urn:srcos:evidence-bundle:lattice-governed-execution-0001",
+      "promotionChannel": "lattice-data-governai-demo",
+      "runtimeRef": "runtime-asset:prophet-ray-ml:0.1.0",
+      "compatibilitySurfaces": ["agentplane", "sherlock-search", "policy-fabric", "lattice-studio"]
     }
   ],
   "safety": {
