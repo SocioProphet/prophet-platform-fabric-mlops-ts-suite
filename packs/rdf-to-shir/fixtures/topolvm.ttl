@@ -1,0 +1,10 @@
+@prefix ex: <https://example.socioprophet.local/sourceos#> .
+@prefix shir: <https://socioprophet.github.io/ontogenesis/shir#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:TopoLVM rdfs:label "TopoLVM" .
+ex:PersistentVolume rdfs:label "PersistentVolume" .
+ex:KubernetesNode rdfs:label "KubernetesNode" .
+
+ex:TopoLVM shir:provisions ex:PersistentVolume .
+ex:TopoLVM shir:targetContext ex:KubernetesNode .
