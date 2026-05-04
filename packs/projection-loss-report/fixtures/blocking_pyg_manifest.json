@@ -1,0 +1,31 @@
+{
+  "projection_id": "shir.projection.sourceos.topolvm.pyg.blocking.001",
+  "source_representation": "SHIR",
+  "target_representation": "PYG_HETERODATA",
+  "relation_strategy": "binary_edges",
+  "strict_publication": true,
+  "preservation": {
+    "context": "dropped",
+    "governance": "dropped",
+    "noise_assessment": "dropped"
+  },
+  "semantic_leakage": {
+    "checked": true,
+    "risk_level": "MEDIUM",
+    "markers": [
+      "ONTOLOGY_HIERARCHY"
+    ],
+    "mitigations": [
+      "Remove ontology class labels from trainable features before publication."
+    ]
+  },
+  "governance": {
+    "review_status": "REQUIRED",
+    "export_allowed": true,
+    "training_allowed": true,
+    "policy_basis": [
+      "shir.v0.1.block_on_missing_policy_or_evidence",
+      "shir.v0.1.strict_publication_requires_temporal_and_policy_scope"
+    ]
+  }
+}
