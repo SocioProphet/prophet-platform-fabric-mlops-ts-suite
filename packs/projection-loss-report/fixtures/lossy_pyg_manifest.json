@@ -1,0 +1,36 @@
+{
+  "projection_id": "shir.projection.sourceos.topolvm.pyg.lossy.001",
+  "source_representation": "SHIR",
+  "target_representation": "PYG_HETERODATA",
+  "relation_strategy": "binary_edges",
+  "strict_publication": false,
+  "preservation": {
+    "temporal_scope": "feature_metadata",
+    "observation_time": "feature_metadata",
+    "evidence_anchors": "external_ref",
+    "policy_scope": "external_ref",
+    "context": "external_ref",
+    "governance": "external_ref",
+    "noise_assessment": "external_ref"
+  },
+  "semantic_leakage": {
+    "checked": true,
+    "risk_level": "LOW",
+    "markers": [
+      "NONE"
+    ],
+    "mitigations": [
+      "Keep policy and receipt references outside trainable tensors.",
+      "Do not use source filenames, ontology labels, or future timestamps as features."
+    ]
+  },
+  "governance": {
+    "review_status": "REQUIRED",
+    "export_allowed": true,
+    "training_allowed": true,
+    "policy_basis": [
+      "shir.v0.1.loss_report_required_for_graph_ml",
+      "policy.public_technical_docs.allowed_for_training"
+    ]
+  }
+}
