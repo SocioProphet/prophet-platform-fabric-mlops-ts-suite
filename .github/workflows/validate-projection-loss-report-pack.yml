@@ -1,0 +1,67 @@
+name: validate-projection-loss-report-pack
+
+on:
+  pull_request:
+    paths:
+      - "packs/projection-loss-report/**"
+      - ".github/workflows/validate-projection-loss-report-pack.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "packs/projection-loss-report/**"
+      - ".github/workflows/validate-projection-loss-report-pack.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-projection-loss-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fabric suite
+        uses: actions/checkout@v4
+        with:
+          path: fabric-suite
+      - name: Checkout semantic-serdes schemas
+        uses: actions/checkout@v4
+        with:
+          repository: SocioProphet/semantic-serdes
+          path: semantic-serdes
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pyyaml
+      - name: Validate source SHIR assertion fixture
+        working-directory: fabric-suite
+        run: |
+          python ../semantic-serdes/tools/validate_semantic_serdes.py --schema-dir ../semantic-serdes/schemas \
+            shir_assertion.schema.json:packs/projection-loss-report/fixtures/source_assertion.json
+      - name: Compile lossy projection report and validate outputs
+        working-directory: fabric-suite
+        run: |
+          python packs/projection-loss-report/tools/projection_loss_report.py \
+            --source-shir packs/projection-loss-report/fixtures/source_assertion.json \
+            --projection-manifest packs/projection-loss-report/fixtures/lossy_pyg_manifest.json \
+            --out-dir /tmp/projection-loss-lossy \
+            --schema-dir ../semantic-serdes/schemas
+          test -f /tmp/projection-loss-lossy/projection_loss_report.json
+          test -f /tmp/projection-loss-lossy/receipt.json
+          python -c "import json; r=json.load(open('/tmp/projection-loss-lossy/projection_loss_report.json')); assert any(i['semantic_dimension']=='N_ARY_RELATION' and i['loss_mode']=='TRANSFORMED' and i['severity']=='MEDIUM' for i in r['loss_items']); assert r['governance']['training_allowed'] is True"
+      - name: Compile blocking projection report and verify fail-closed exit
+        working-directory: fabric-suite
+        run: |
+          set +e
+          python packs/projection-loss-report/tools/projection_loss_report.py \
+            --source-shir packs/projection-loss-report/fixtures/source_assertion.json \
+            --projection-manifest packs/projection-loss-report/fixtures/blocking_pyg_manifest.json \
+            --out-dir /tmp/projection-loss-blocking \
+            --schema-dir ../semantic-serdes/schemas \
+            --fail-on-blocking
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test -f /tmp/projection-loss-blocking/projection_loss_report.json
+          test -f /tmp/projection-loss-blocking/receipt.json
+          python -c "import json; r=json.load(open('/tmp/projection-loss-blocking/projection_loss_report.json')); assert any(i['severity']=='BLOCKING' for i in r['loss_items']); assert r['governance']['training_allowed'] is False; assert r['governance']['export_allowed'] is False"
