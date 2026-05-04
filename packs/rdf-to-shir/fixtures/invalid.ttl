@@ -1,0 +1,3 @@
+@prefix ex: <https://example.socioprophet.local/sourceos#> .
+
+ex:TopoLVM ex:provisions
