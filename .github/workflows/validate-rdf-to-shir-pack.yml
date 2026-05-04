@@ -1,0 +1,55 @@
+name: validate-rdf-to-shir-pack
+
+on:
+  pull_request:
+    paths:
+      - "packs/rdf-to-shir/**"
+      - ".github/workflows/validate-rdf-to-shir-pack.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "packs/rdf-to-shir/**"
+      - ".github/workflows/validate-rdf-to-shir-pack.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-rdf-to-shir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fabric suite
+        uses: actions/checkout@v4
+        with:
+          path: fabric-suite
+      - name: Checkout semantic-serdes schemas
+        uses: actions/checkout@v4
+        with:
+          repository: SocioProphet/semantic-serdes
+          path: semantic-serdes
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema
+      - name: Compile valid Turtle fixture and validate SHIR outputs
+        working-directory: fabric-suite
+        run: |
+          python packs/rdf-to-shir/tools/rdf_to_shir.py \
+            --input packs/rdf-to-shir/fixtures/topolvm.ttl \
+            --out-dir /tmp/rdf-to-shir-valid \
+            --schema-dir ../semantic-serdes/schemas
+          test -f /tmp/rdf-to-shir-valid/candidate_assertion.json
+          test -f /tmp/rdf-to-shir-valid/assertion.json
+          test -f /tmp/rdf-to-shir-valid/receipt.json
+      - name: Verify invalid fixture fails closed with compile_error artifact
+        working-directory: fabric-suite
+        run: |
+          if python packs/rdf-to-shir/tools/rdf_to_shir.py \
+            --input packs/rdf-to-shir/fixtures/invalid.ttl \
+            --out-dir /tmp/rdf-to-shir-invalid; then
+            echo "invalid fixture unexpectedly compiled" >&2
+            exit 1
+          fi
+          test -f /tmp/rdf-to-shir-invalid/compile_error.json
