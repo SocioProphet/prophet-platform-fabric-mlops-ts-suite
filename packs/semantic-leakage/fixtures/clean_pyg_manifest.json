@@ -1,0 +1,83 @@
+{
+  "manifest_id": "pyg.manifest.sourceos.topolvm.clean.001",
+  "kind": "PyGHeteroDataManifest",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_assertion_ref": "shir.assertion.sourceos.topolvm.provisions.pv.001",
+  "source_representation": "SHIR",
+  "target_representation": "PYG_HETERODATA",
+  "target_framework": "pyg",
+  "materialization": "manifest_only",
+  "relation_strategy": "relation_node",
+  "node_types": {
+    "Technology": {
+      "count": 1,
+      "ids": [
+        "entity.topolvm"
+      ],
+      "labels": {
+        "entity.topolvm": "TopoLVM"
+      },
+      "source_refs": {
+        "entity.topolvm": "shir.assertion.sourceos.topolvm.provisions.pv.001"
+      },
+      "trainable": false
+    },
+    "Relation": {
+      "count": 1,
+      "ids": [
+        "relation.shir.assertion.sourceos.topolvm.provisions.pv.001"
+      ],
+      "labels": {
+        "relation.shir.assertion.sourceos.topolvm.provisions.pv.001": "Relation for provisions(provider, resource, target_context)"
+      },
+      "source_refs": {
+        "relation.shir.assertion.sourceos.topolvm.provisions.pv.001": "shir.assertion.sourceos.topolvm.provisions.pv.001"
+      },
+      "trainable": false
+    }
+  },
+  "edge_types": [
+    {
+      "edge_type": "(Technology, role_provider, Relation)",
+      "source_type": "Technology",
+      "relation": "role_provider",
+      "target_type": "Relation",
+      "source_id": "entity.topolvm",
+      "target_id": "relation.shir.assertion.sourceos.topolvm.provisions.pv.001",
+      "source_ref": "shir.assertion.sourceos.topolvm.provisions.pv.001"
+    }
+  ],
+  "feature_provenance": [
+    {
+      "node_id": "entity.topolvm",
+      "feature_name": "label",
+      "source_ref": "shir.assertion.sourceos.topolvm.provisions.pv.001.role_bindings.provider",
+      "trainable": false,
+      "notes": "Label retained as manifest metadata, not tensorized."
+    }
+  ],
+  "train_test_split": {
+    "status": "NOT_MATERIALIZED",
+    "split_policy": "defer_until_dataset_materialization",
+    "leakage_sensitive": true
+  },
+  "semantic_leakage": {
+    "checked": true,
+    "risk_level": "LOW",
+    "markers": [
+      "NONE"
+    ],
+    "mitigations": [
+      "Do not tensorize ontology class labels, source filenames, policy refs, or receipt refs in v0.1."
+    ]
+  },
+  "governance": {
+    "review_status": "REQUIRED",
+    "export_allowed": true,
+    "training_allowed": true,
+    "policy_basis": [
+      "shir.v0.1.loss_report_required_for_graph_ml",
+      "policy.public_technical_docs.allowed_for_training"
+    ]
+  }
+}
