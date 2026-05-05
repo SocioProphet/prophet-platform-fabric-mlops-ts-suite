@@ -1,0 +1,93 @@
+{
+  "assertion_id": "shir.assertion.sourceos.topolvm.provisions.pv.001",
+  "kind": "Assertion",
+  "assertion_status": "VALIDATED",
+  "plane": "ENTITY",
+  "truth_class": "ASSERTED",
+  "time_model": "SNAPSHOT",
+  "connector": {
+    "connector_id": "connector.provisions.resource.context",
+    "label": "provisions(provider, resource, target_context)",
+    "iri": "https://socioprophet.github.io/ontogenesis/shir#provisions",
+    "roles": [
+      "provider",
+      "resource",
+      "target_context"
+    ]
+  },
+  "role_bindings": [
+    {
+      "role": "provider",
+      "participant_id": "entity.topolvm",
+      "participant_type": "NODE",
+      "label": "TopoLVM"
+    },
+    {
+      "role": "resource",
+      "participant_id": "entity.kubernetes.persistent_volume",
+      "participant_type": "NODE",
+      "label": "PersistentVolume"
+    },
+    {
+      "role": "target_context",
+      "participant_id": "entity.kubernetes.node",
+      "participant_type": "NODE",
+      "label": "KubernetesNode"
+    }
+  ],
+  "context": {
+    "context_id": "context.sourceos.agent_machine_storage.snapshot",
+    "label": "SourceOS Agent Machine Storage Snapshot",
+    "scope": "DOMAIN",
+    "parent_context_refs": [
+      "context.sourceos",
+      "context.agentos"
+    ]
+  },
+  "temporal_scope": {
+    "time_model": "SNAPSHOT",
+    "observed_at": "1970-01-01T00:00:00Z",
+    "transaction_time": "1970-01-01T00:00:00Z"
+  },
+  "policy_scope": {
+    "policy_scope_id": "policy.scope.public.technical-docs",
+    "classification": "PUBLIC",
+    "export_eligible": true,
+    "training_eligible": true,
+    "policy_basis": [
+      "policy.public_technical_docs.allowed_for_training"
+    ]
+  },
+  "evidence_anchors": [
+    {
+      "anchor_id": "anchor.sourceos.storage.p17.s1",
+      "anchor_type": "TEXT_SPAN",
+      "artifact_ref": "docs://sourceos/agent-machine-storage",
+      "selector": {
+        "paragraph": 17,
+        "start_char": 0,
+        "end_char": 68,
+        "text": "TopoLVM provisions local persistent volumes for Kubernetes nodes."
+      }
+    }
+  ],
+  "governance": {
+    "admissibility_tier": "VALIDATED",
+    "review_status": "APPROVED",
+    "policy_basis": [
+      "shir.v0.1.validated_assertion"
+    ]
+  },
+  "receipt_ref": "shir.receipt.sourceos.topolvm.projection.001",
+  "source_candidate_refs": [
+    "shir.candidate.sourceos.topolvm.provisions.pv.001"
+  ],
+  "noise_assessments": [
+    {
+      "noise_type": "WRONG_SCOPE",
+      "confidence": 0.37,
+      "repair_action": "REQUEST_HUMAN_REVIEW",
+      "explanation": "Persistent versus ephemeral storage semantics depend on workload and retention policy; preserve context before graph projection."
+    }
+  ]
+}

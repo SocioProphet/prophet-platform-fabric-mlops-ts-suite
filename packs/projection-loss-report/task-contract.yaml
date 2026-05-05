@@ -1,0 +1,69 @@
+pack_id: projection-loss-report
+version: 0.1.0
+status: draft
+tracking_issue: https://github.com/SocioProphet/prophet-platform-fabric-mlops-ts-suite/issues/39
+purpose: Audit SHIR lowering operations and emit ProjectionLossReport plus Receipt artifacts.
+inputs:
+  - name: source_shir
+    type: file
+    media_type: application/json
+    required: true
+    schema: shir_assertion.schema.json
+    description: Source SHIR assertion artifact.
+  - name: projection_manifest
+    type: file
+    media_type: application/json
+    required: true
+    description: Target projection manifest describing target representation, preservation strategy, semantic leakage, and governance.
+  - name: schema_dir
+    type: directory
+    required: false
+    description: Optional semantic-serdes schemas directory for output validation.
+outputs:
+  - name: projection_loss_report
+    path: projection_loss_report.json
+    schema: shir_projection_loss_report.schema.json
+  - name: receipt
+    path: receipt.json
+    schema: shir_receipt.schema.json
+  - name: compile_error
+    path: compile_error.json
+    required_on_failure: true
+runtime:
+  language: python
+  minimum_version: '3.11'
+  dependency_profile:
+    required: []
+    optional_validation:
+      - jsonschema
+commands:
+  lossy_projection: >-
+    python packs/projection-loss-report/tools/projection_loss_report.py
+    --source-shir packs/projection-loss-report/fixtures/source_assertion.json
+    --projection-manifest packs/projection-loss-report/fixtures/lossy_pyg_manifest.json
+    --out-dir /tmp/projection-loss-out
+  lossy_projection_with_validation: >-
+    python packs/projection-loss-report/tools/projection_loss_report.py
+    --source-shir packs/projection-loss-report/fixtures/source_assertion.json
+    --projection-manifest packs/projection-loss-report/fixtures/lossy_pyg_manifest.json
+    --out-dir /tmp/projection-loss-out
+    --schema-dir ../semantic-serdes/schemas
+  blocking_projection: >-
+    python packs/projection-loss-report/tools/projection_loss_report.py
+    --source-shir packs/projection-loss-report/fixtures/source_assertion.json
+    --projection-manifest packs/projection-loss-report/fixtures/blocking_pyg_manifest.json
+    --out-dir /tmp/projection-loss-blocking
+    --schema-dir ../semantic-serdes/schemas
+    --fail-on-blocking
+guarantees:
+  - N-ary-to-binary lowering is reported as at least MEDIUM severity unless relation-node or hyperedge preservation is declared.
+  - Missing evidence anchors in training exports produces BLOCKING severity.
+  - Missing policy scope in training/export projections produces BLOCKING severity.
+  - Blocking findings can stop downstream publication through --fail-on-blocking.
+  - Outputs validate against semantic-serdes projection-loss report and receipt schemas.
+  - The pack audits projection outputs and does not execute graph-ML projection itself.
+non_goals:
+  - GNN training.
+  - PyG or DGL materialization.
+  - Ontology mutation or promotion.
+  - Automatic semantic repair.
