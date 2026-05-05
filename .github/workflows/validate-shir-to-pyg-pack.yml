@@ -1,0 +1,75 @@
+name: validate-shir-to-pyg-pack
+
+on:
+  pull_request:
+    paths:
+      - "packs/shir-to-pyg/**"
+      - "packs/projection-loss-report/**"
+      - ".github/workflows/validate-shir-to-pyg-pack.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "packs/shir-to-pyg/**"
+      - "packs/projection-loss-report/**"
+      - ".github/workflows/validate-shir-to-pyg-pack.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-shir-to-pyg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fabric suite
+        uses: actions/checkout@v4
+        with:
+          path: fabric-suite
+      - name: Checkout semantic-serdes schemas
+        uses: actions/checkout@v4
+        with:
+          repository: SocioProphet/semantic-serdes
+          path: semantic-serdes
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pyyaml
+      - name: Validate source SHIR assertion fixture
+        working-directory: fabric-suite
+        run: |
+          python ../semantic-serdes/tools/validate_semantic_serdes.py --schema-dir ../semantic-serdes/schemas \
+            shir_assertion.schema.json:packs/shir-to-pyg/fixtures/source_assertion.json
+      - name: Compile PyG manifest and validate governed outputs
+        working-directory: fabric-suite
+        run: |
+          python packs/shir-to-pyg/tools/shir_to_pyg.py \
+            --source-shir packs/shir-to-pyg/fixtures/source_assertion.json \
+            --out-dir /tmp/shir-to-pyg-out \
+            --schema-dir ../semantic-serdes/schemas
+          test -f /tmp/shir-to-pyg-out/pyg_manifest.json
+          test -f /tmp/shir-to-pyg-out/projection_manifest.json
+          test -f /tmp/shir-to-pyg-out/projection_loss_report.json
+          test -f /tmp/shir-to-pyg-out/receipt.json
+      - name: Assert relation-node preservation and receipt outputs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path('/tmp/shir-to-pyg-out')
+          manifest = json.loads((out / 'pyg_manifest.json').read_text())
+          report = json.loads((out / 'projection_loss_report.json').read_text())
+          receipt = json.loads((out / 'receipt.json').read_text())
+          assert manifest['materialization'] == 'manifest_only'
+          assert manifest['relation_strategy'] == 'relation_node'
+          assert 'Relation' in manifest['node_types']
+          assert any(edge['relation'] == 'role_provider' for edge in manifest['edge_types'])
+          assert any(edge['relation'] == 'role_resource' for edge in manifest['edge_types'])
+          assert any(edge['relation'] == 'role_target_context' for edge in manifest['edge_types'])
+          assert any(item['semantic_dimension'] == 'N_ARY_RELATION' and item['loss_mode'] == 'PRESERVED' for item in report['loss_items'])
+          assert report['semantic_leakage']['checked'] is True
+          assert receipt['semantic_leakage_checked'] is True
+          output_types = {item['artifact_type'] for item in receipt['outputs']}
+          assert 'PYG_MANIFEST' in output_types
+          assert 'PROJECTION_LOSS_REPORT' in output_types
+          PY

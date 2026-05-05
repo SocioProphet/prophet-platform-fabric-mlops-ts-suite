@@ -1,0 +1,63 @@
+pack_id: shir-to-pyg
+version: 0.1.0
+status: draft
+tracking_issue: https://github.com/SocioProphet/prophet-platform-fabric-mlops-ts-suite/issues/37
+purpose: Lower SHIR assertions into PyG-style heterogeneous graph manifests with projection-loss accounting.
+inputs:
+  - name: source_shir
+    type: file
+    media_type: application/json
+    required: true
+    schema: shir_assertion.schema.json
+    description: Source SHIR assertion artifact.
+  - name: schema_dir
+    type: directory
+    required: false
+    description: Optional semantic-serdes schemas directory for validating projection-loss and receipt outputs.
+outputs:
+  - name: pyg_manifest
+    path: pyg_manifest.json
+    description: Manifest-only PyG HeteroData-compatible graph projection.
+  - name: projection_manifest
+    path: projection_manifest.json
+    description: Input manifest passed into the projection-loss-report pack.
+  - name: projection_loss_report
+    path: projection_loss_report.json
+    schema: shir_projection_loss_report.schema.json
+  - name: receipt
+    path: receipt.json
+    schema: shir_receipt.schema.json
+  - name: compile_error
+    path: compile_error.json
+    required_on_failure: true
+runtime:
+  language: python
+  minimum_version: '3.11'
+  dependency_profile:
+    required: []
+    optional_validation:
+      - jsonschema
+commands:
+  project: >-
+    python packs/shir-to-pyg/tools/shir_to_pyg.py
+    --source-shir packs/shir-to-pyg/fixtures/source_assertion.json
+    --out-dir /tmp/shir-to-pyg-out
+  project_with_validation: >-
+    python packs/shir-to-pyg/tools/shir_to_pyg.py
+    --source-shir packs/shir-to-pyg/fixtures/source_assertion.json
+    --out-dir /tmp/shir-to-pyg-out
+    --schema-dir ../semantic-serdes/schemas
+guarantees:
+  - Input is SHIR, not raw RDF.
+  - Output is manifest-only and does not require PyTorch, PyG, or DGL.
+  - N-ary relation bindings are preserved through relation-node projection by default.
+  - Every projection emits projection_manifest.json, projection_loss_report.json, and receipt.json.
+  - Policy, receipt, and evidence references remain out of trainable tensors in v0.1.
+  - Semantic leakage metadata is included before graph-ML export.
+  - Final receipt references both the PyG manifest and projection-loss report.
+non_goals:
+  - Full PyG tensor materialization.
+  - GNN training.
+  - RDF parsing.
+  - Ontology promotion.
+  - Semantic leakage detection beyond metadata; the dedicated semantic-leakage pack owns enforcement.
