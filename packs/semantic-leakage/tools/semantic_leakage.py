@@ -13,18 +13,12 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 DEFAULT_TIMESTAMP = "1970-01-01T00:00:00Z"
 CONFIG_HASH = "sha256:semantic-leakage-pack-v0.1-default"
 SEVERITY_ORDER = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "BLOCKING": 4}
-RISK_BY_SEVERITY = {
-    "INFO": "NONE",
-    "LOW": "LOW",
-    "MEDIUM": "MEDIUM",
-    "HIGH": "HIGH",
-    "BLOCKING": "BLOCKING",
-}
+RISK_BY_SEVERITY = {"INFO": "NONE", "LOW": "LOW", "MEDIUM": "MEDIUM", "HIGH": "HIGH", "BLOCKING": "BLOCKING"}
 LEAKAGE_TO_DIMENSION = {
     "RDF_TYPE_LABEL": "CONTEXT",
     "ONTOLOGY_HIERARCHY": "CONTEXT",
@@ -47,7 +41,6 @@ LEAKAGE_SEVERITY = {
     "TARGET_PROPERTY": "BLOCKING",
     "TRAIN_TEST_CONTAMINATION": "BLOCKING",
 }
-
 SENSITIVE_FEATURE_TOKENS = {
     "rdf_type": "RDF_TYPE_LABEL",
     "rdf:type": "RDF_TYPE_LABEL",
@@ -66,8 +59,10 @@ SENSITIVE_FEATURE_TOKENS = {
     "receipt_ref": "PROVENANCE_FIELD",
     "target": "TARGET_PROPERTY",
     "label_target": "TARGET_PROPERTY",
+    "prediction_label": "TARGET_PROPERTY",
     "ground_truth": "TARGET_PROPERTY",
 }
+TARGET_RELATION_TOKENS = {"target_property", "predicted_label", "ground_truth", "label_target"}
 
 
 def sha256_text(text: str) -> str:
@@ -97,7 +92,7 @@ def parse_dt(value: str) -> dt.datetime:
 
 def max_severity(findings: Iterable[Dict[str, Any]]) -> str:
     max_name = "INFO"
-    max_value = SEVERITY_ORDER[max_name]
+    max_value = 0
     for finding in findings:
         value = SEVERITY_ORDER.get(finding.get("severity", "INFO"), 0)
         if value > max_value:
@@ -106,38 +101,30 @@ def max_severity(findings: Iterable[Dict[str, Any]]) -> str:
     return max_name
 
 
-def marker_for_feature_name(name: str) -> Optional[str]:
-    lowered = name.lower()
-    for token, marker in SENSITIVE_FEATURE_TOKENS.items():
-        if token in lowered:
-            return marker
-    return None
-
-
-def add_finding(findings: List[Dict[str, Any]], marker: str, location: str, explanation: str) -> None:
-    findings.append(
-        {
-            "marker": marker,
-            "severity": LEAKAGE_SEVERITY[marker],
-            "location": location,
-            "explanation": explanation,
-            "mitigation": mitigation_for(marker),
-        }
-    )
-
-
 def mitigation_for(marker: str) -> str:
     return {
         "RDF_TYPE_LABEL": "Remove RDF/type/class-label features from trainable tensors unless the task explicitly predicts type and split design prevents leakage.",
         "ONTOLOGY_HIERARCHY": "Remove direct ontology ancestry features or isolate them behind a task-specific ablation and leakage receipt.",
-        "GRAPH_PARTITION": "Do not use graph names or partition IDs as trainable features unless partition is part of the legitimate prediction input.",
+        "GRAPH_PARTITION": "Do not use graph names or partition IDs as trainable features unless partition is legitimate prediction input.",
         "SOURCE_FILENAME": "Strip source filenames and path-derived metadata from trainable features.",
         "FUTURE_TIMESTAMP": "Remove or censor timestamps later than the prediction cutoff before training/export.",
         "PROVENANCE_FIELD": "Keep provenance, source refs, and receipt refs outside trainable tensors unless governance prediction is the explicit task.",
         "NAMING_CONVENTION": "Hash or remove IDs/names that encode target classes, outcomes, splits, or policy labels.",
-        "TARGET_PROPERTY": "Remove target/ground-truth fields from feature manifests before training.",
+        "TARGET_PROPERTY": "Remove target/expected-output fields from feature manifests before training.",
         "TRAIN_TEST_CONTAMINATION": "Recompute splits by stable entity ID, provenance group, and temporal cutoff to prevent duplicated train/test rows.",
     }[marker]
+
+
+def add_finding(findings: List[Dict[str, Any]], marker: str, location: str, explanation: str) -> None:
+    findings.append({"marker": marker, "severity": LEAKAGE_SEVERITY[marker], "location": location, "explanation": explanation, "mitigation": mitigation_for(marker)})
+
+
+def marker_for_text(text: str) -> Optional[str]:
+    lowered = text.lower()
+    for token, marker in SENSITIVE_FEATURE_TOKENS.items():
+        if token in lowered:
+            return marker
+    return None
 
 
 def scan_feature_provenance(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -146,20 +133,16 @@ def scan_feature_provenance(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not isinstance(features, list):
         add_finding(findings, "PROVENANCE_FIELD", "feature_provenance", "feature_provenance is not a list; cannot safely audit features.")
         return findings
-
     for idx, feature in enumerate(features):
         if not isinstance(feature, dict):
             continue
         trainable = bool(feature.get("trainable", True))
         name = str(feature.get("feature_name", ""))
         source_ref = str(feature.get("source_ref", ""))
-        location = f"feature_provenance[{idx}]"
         if trainable:
-            marker = marker_for_feature_name(name) or marker_for_feature_name(source_ref)
+            marker = marker_for_text(name) or marker_for_text(source_ref)
             if marker:
-                add_finding(findings, marker, location, f"Trainable feature {name!r} or source_ref {source_ref!r} appears to encode {marker}.")
-        if "target" in name.lower() and trainable:
-            add_finding(findings, "TARGET_PROPERTY", location, f"Trainable feature {name!r} appears to encode a target property.")
+                add_finding(findings, marker, f"feature_provenance[{idx}]", f"Trainable feature {name!r} or source_ref {source_ref!r} appears to encode {marker}.")
     return findings
 
 
@@ -175,15 +158,15 @@ def scan_nodes_and_edges(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
                 add_finding(findings, "PROVENANCE_FIELD", f"node_types.{node_type}", f"Governance/context/evidence node type {node_type!r} is marked trainable.")
             for node_id in bucket.get("ids", []) or []:
                 lowered = str(node_id).lower()
-                if any(token in lowered for token in ["target", "ground_truth", "label"]):
-                    add_finding(findings, "NAMING_CONVENTION", f"node_types.{node_type}.ids", f"Node id {node_id!r} appears to encode a target or label naming convention.")
+                if any(token in lowered for token in ["ground_truth", "label_storage_class", "target_storage_class"]):
+                    add_finding(findings, "NAMING_CONVENTION", f"node_types.{node_type}.ids", f"Node id {node_id!r} appears to encode a label or target naming convention.")
     edge_types = manifest.get("edge_types", []) or []
     if isinstance(edge_types, list):
         for idx, edge in enumerate(edge_types):
             if not isinstance(edge, dict):
                 continue
             relation = str(edge.get("relation", "")).lower()
-            if "target" in relation or "ground_truth" in relation:
+            if relation in TARGET_RELATION_TOKENS:
                 add_finding(findings, "TARGET_PROPERTY", f"edge_types[{idx}]", f"Edge relation {relation!r} appears to encode target information.")
     return findings
 
@@ -209,16 +192,11 @@ def scan_temporal(manifest: Dict[str, Any], prediction_cutoff: Optional[str]) ->
     if not prediction_cutoff:
         return findings
     cutoff = parse_dt(prediction_cutoff)
-    timestamps = manifest.get("temporal_features", []) or []
-    if not isinstance(timestamps, list):
-        add_finding(findings, "FUTURE_TIMESTAMP", "temporal_features", "temporal_features is not a list; cannot audit future timestamp leakage.")
-        return findings
-    for idx, feature in enumerate(timestamps):
+    for idx, feature in enumerate(manifest.get("temporal_features", []) or []):
         if not isinstance(feature, dict):
             continue
         value = feature.get("value")
-        trainable = bool(feature.get("trainable", True))
-        if value and trainable:
+        if value and bool(feature.get("trainable", True)):
             try:
                 parsed = parse_dt(str(value))
             except ValueError:
@@ -255,7 +233,6 @@ def unique_markers(findings: List[Dict[str, Any]]) -> List[str]:
 
 def build_native_report(manifest: Dict[str, Any], manifest_hash: str, findings: List[Dict[str, Any]], prediction_cutoff: Optional[str], timestamp: str) -> Dict[str, Any]:
     severity = max_severity(findings)
-    markers = unique_markers(findings)
     return {
         "report_id": f"semantic.leakage.{manifest_hash[:12]}",
         "kind": "SemanticLeakageReport",
@@ -263,7 +240,7 @@ def build_native_report(manifest: Dict[str, Any], manifest_hash: str, findings: 
         "manifest_ref": manifest.get("manifest_id", manifest.get("projection_id", "manifest.unknown")),
         "prediction_cutoff": prediction_cutoff,
         "risk_level": RISK_BY_SEVERITY[severity],
-        "markers": markers,
+        "markers": unique_markers(findings),
         "findings": findings,
         "mitigations": sorted({finding["mitigation"] for finding in findings}) if findings else [],
         "summary": "No semantic leakage detected." if not findings else f"Detected {len(findings)} semantic leakage finding(s).",
@@ -271,34 +248,26 @@ def build_native_report(manifest: Dict[str, Any], manifest_hash: str, findings: 
 
 
 def build_projection_loss_report(manifest: Dict[str, Any], native_report: Dict[str, Any], manifest_hash: str, timestamp: str) -> Dict[str, Any]:
-    markers = native_report["markers"]
-    findings = native_report["findings"]
     loss_items: List[Dict[str, Any]] = []
-    if findings:
-        for idx, finding in enumerate(findings):
-            marker = finding["marker"]
-            loss_items.append(
-                {
-                    "semantic_dimension": LEAKAGE_TO_DIMENSION[marker],
-                    "loss_mode": "PRESERVED" if finding["severity"] in {"INFO", "LOW"} else "APPROXIMATED",
-                    "source_ref": finding["location"],
-                    "target_ref": manifest.get("manifest_id", manifest.get("projection_id", "manifest.unknown")),
-                    "explanation": finding["explanation"],
-                    "severity": finding["severity"],
-                }
-            )
-    else:
-        loss_items.append(
-            {
-                "semantic_dimension": "PROVENANCE",
-                "loss_mode": "PRESERVED",
-                "source_ref": manifest.get("manifest_id", manifest.get("projection_id", "manifest.unknown")),
-                "target_ref": native_report["report_id"],
-                "explanation": "Semantic leakage detector found no leakage markers in audited manifest fields.",
-                "severity": "INFO",
-            }
-        )
-
+    for finding in native_report["findings"]:
+        marker = finding["marker"]
+        loss_items.append({
+            "semantic_dimension": LEAKAGE_TO_DIMENSION[marker],
+            "loss_mode": "APPROXIMATED" if finding["severity"] not in {"INFO", "LOW"} else "PRESERVED",
+            "source_ref": finding["location"],
+            "target_ref": manifest.get("manifest_id", manifest.get("projection_id", "manifest.unknown")),
+            "explanation": finding["explanation"],
+            "severity": finding["severity"],
+        })
+    if not loss_items:
+        loss_items.append({
+            "semantic_dimension": "PROVENANCE",
+            "loss_mode": "PRESERVED",
+            "source_ref": manifest.get("manifest_id", manifest.get("projection_id", "manifest.unknown")),
+            "target_ref": native_report["report_id"],
+            "explanation": "Semantic leakage detector found no leakage markers in audited manifest fields.",
+            "severity": "INFO",
+        })
     blocking = any(item["severity"] == "BLOCKING" for item in loss_items)
     return {
         "report_id": f"shir.loss.semantic_leakage.{manifest_hash[:12]}",
@@ -310,22 +279,17 @@ def build_projection_loss_report(manifest: Dict[str, Any], native_report: Dict[s
         "semantic_leakage": {
             "checked": True,
             "risk_level": native_report["risk_level"],
-            "markers": markers,
+            "markers": native_report["markers"],
             "mitigations": native_report["mitigations"],
         },
         "governance": {
-            "review_status": "ESCALATED" if blocking else ("REQUIRED" if findings else "NOT_REQUIRED"),
+            "review_status": "ESCALATED" if blocking else ("REQUIRED" if native_report["findings"] else "NOT_REQUIRED"),
             "export_allowed": not blocking,
             "training_allowed": not blocking,
             "policy_basis": ["shir.v0.1.semantic_leakage_detection_required"],
         },
         "receipt_ref": f"shir.receipt.semantic_leakage.{manifest_hash[:12]}",
-        "replay": {
-            "inputs_hash": f"sha256:{manifest_hash}",
-            "config_hash": CONFIG_HASH,
-            "replayable": True,
-            "created_at": timestamp,
-        },
+        "replay": {"inputs_hash": f"sha256:{manifest_hash}", "config_hash": CONFIG_HASH, "replayable": True, "created_at": timestamp},
         "notes": native_report["summary"],
     }
 
@@ -339,65 +303,18 @@ def build_receipt(manifest_path: Path, manifest_hash: str, native_report: Dict[s
         "kind": "Receipt",
         "receipt_type": "VALIDATION",
         "created_at": timestamp,
-        "compiler": {
-            "name": "semantic-leakage-pack",
-            "version": "0.1.0",
-            "commit_sha": "unreleased-pack-v0.1",
-            "runtime": "python-stdlib",
-        },
-        "ontology_profile": {
-            "profile_id": "ontogenesis.shir.v0.1",
-            "version": "0.1.0-draft",
-            "module_refs": ["https://github.com/SocioProphet/ontogenesis/blob/main/docs/specs/shir-v0.1.md"],
-            "shape_refs": ["shapes://pending/shir-core"],
-        },
-        "source_hashes": [
-            {"algorithm": "sha256", "value": manifest_hash, "artifact_ref": str(manifest_path)}
-        ],
-        "transform": {
-            "transform_id": "transform.semantic_leakage.v0.1",
-            "transform_type": "VALIDATION",
-            "config_hash": CONFIG_HASH,
-            "parameters": {
-                "risk_level": native_report["risk_level"],
-                "markers": native_report["markers"],
-            },
-        },
-        "policy_decision": {
-            "decision": "REVIEW_REQUIRED" if blocking else "ALLOW",
-            "policy_basis": loss_report["governance"]["policy_basis"],
-            "decided_at": timestamp,
-            "decision_ref": f"policy.decision.semantic_leakage.{manifest_hash[:12]}",
-        },
+        "compiler": {"name": "semantic-leakage-pack", "version": "0.1.0", "commit_sha": "unreleased-pack-v0.1", "runtime": "python-stdlib"},
+        "ontology_profile": {"profile_id": "ontogenesis.shir.v0.1", "version": "0.1.0-draft", "module_refs": ["https://github.com/SocioProphet/ontogenesis/blob/main/docs/specs/shir-v0.1.md"], "shape_refs": ["shapes://pending/shir-core"]},
+        "source_hashes": [{"algorithm": "sha256", "value": manifest_hash, "artifact_ref": str(manifest_path)}],
+        "transform": {"transform_id": "transform.semantic_leakage.v0.1", "transform_type": "VALIDATION", "config_hash": CONFIG_HASH, "parameters": {"risk_level": native_report["risk_level"], "markers": native_report["markers"]}},
+        "policy_decision": {"decision": "REVIEW_REQUIRED" if blocking else "ALLOW", "policy_basis": loss_report["governance"]["policy_basis"], "decided_at": timestamp, "decision_ref": f"policy.decision.semantic_leakage.{manifest_hash[:12]}"},
         "projection_loss_report_ref": loss_report["report_id"],
         "semantic_leakage_checked": True,
         "outputs": [
-            {
-                "artifact_ref": str(out_dir / "semantic_leakage_report.json"),
-                "artifact_type": "VALIDATION_REPORT",
-                "hash": {
-                    "algorithm": "sha256",
-                    "value": native_hash,
-                    "artifact_ref": str(out_dir / "semantic_leakage_report.json"),
-                },
-            },
-            {
-                "artifact_ref": str(out_dir / "projection_loss_report.json"),
-                "artifact_type": "PROJECTION_LOSS_REPORT",
-                "hash": {
-                    "algorithm": "sha256",
-                    "value": loss_hash,
-                    "artifact_ref": str(out_dir / "projection_loss_report.json"),
-                },
-            },
+            {"artifact_ref": str(out_dir / "semantic_leakage_report.json"), "artifact_type": "VALIDATION_REPORT", "hash": {"algorithm": "sha256", "value": native_hash, "artifact_ref": str(out_dir / "semantic_leakage_report.json")}},
+            {"artifact_ref": str(out_dir / "projection_loss_report.json"), "artifact_type": "PROJECTION_LOSS_REPORT", "hash": {"algorithm": "sha256", "value": loss_hash, "artifact_ref": str(out_dir / "projection_loss_report.json")}},
         ],
-        "replay": {
-            "replayable": True,
-            "inputs_hash": f"sha256:{manifest_hash}",
-            "config_hash": CONFIG_HASH,
-            "deterministic_seed": 7,
-            "environment_ref": "python-stdlib",
-        },
+        "replay": {"replayable": True, "inputs_hash": f"sha256:{manifest_hash}", "config_hash": CONFIG_HASH, "deterministic_seed": 7, "environment_ref": "python-stdlib"},
         "notes": native_report["summary"],
     }
 
@@ -407,13 +324,8 @@ def validate_outputs(schema_dir: Path, out_dir: Path) -> None:
         import jsonschema  # type: ignore
     except ImportError as exc:
         raise SystemExit(f"jsonschema is required for --schema-dir validation: {exc}") from exc
-    for schema_name, output_name in [
-        ("shir_projection_loss_report.schema.json", "projection_loss_report.json"),
-        ("shir_receipt.schema.json", "receipt.json"),
-    ]:
-        schema = load_json(schema_dir / schema_name)
-        instance = load_json(out_dir / output_name)
-        jsonschema.validate(instance=instance, schema=schema)
+    for schema_name, output_name in [("shir_projection_loss_report.schema.json", "projection_loss_report.json"), ("shir_receipt.schema.json", "receipt.json")]:
+        jsonschema.validate(instance=load_json(out_dir / output_name), schema=load_json(schema_dir / schema_name))
         print(f"OK  {output_name}  against  {schema_name}")
 
 
@@ -421,8 +333,7 @@ def compile_report(manifest_path: Path, out_dir: Path, timestamp: str, predictio
     manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest_hash = sha256_text(manifest_text)
     manifest = json.loads(manifest_text)
-    findings = scan_manifest(manifest, prediction_cutoff)
-    native_report = build_native_report(manifest, manifest_hash, findings, prediction_cutoff, timestamp)
+    native_report = build_native_report(manifest, manifest_hash, scan_manifest(manifest, prediction_cutoff), prediction_cutoff, timestamp)
     loss_report = build_projection_loss_report(manifest, native_report, manifest_hash, timestamp)
     receipt = build_receipt(manifest_path, manifest_hash, native_report, loss_report, timestamp, out_dir)
     write_json(out_dir / "semantic_leakage_report.json", native_report)
@@ -434,23 +345,7 @@ def compile_report(manifest_path: Path, out_dir: Path, timestamp: str, predictio
 
 
 def build_error_artifact(manifest_path: Path, timestamp: str, error: Exception) -> Dict[str, Any]:
-    return {
-        "kind": "SemanticLeakageCompileError",
-        "created_at": timestamp,
-        "compiler": {
-            "name": "semantic-leakage-pack",
-            "version": "0.1.0",
-            "runtime": "python-stdlib",
-        },
-        "manifest_ref": str(manifest_path),
-        "error_type": type(error).__name__,
-        "error_message": str(error),
-        "policy_decision": "QUARANTINE",
-        "replay": {
-            "replayable": manifest_path.exists(),
-            "config_hash": CONFIG_HASH,
-        },
-    }
+    return {"kind": "SemanticLeakageCompileError", "created_at": timestamp, "compiler": {"name": "semantic-leakage-pack", "version": "0.1.0", "runtime": "python-stdlib"}, "manifest_ref": str(manifest_path), "error_type": type(error).__name__, "error_message": str(error), "policy_decision": "QUARANTINE", "replay": {"replayable": manifest_path.exists(), "config_hash": CONFIG_HASH}}
 
 
 def main() -> int:
@@ -462,18 +357,14 @@ def main() -> int:
     parser.add_argument("--timestamp", default=DEFAULT_TIMESTAMP, help="Deterministic timestamp for generated artifacts")
     parser.add_argument("--fail-on-blocking", action="store_true", help="Exit 2 when a blocking leakage finding is detected")
     args = parser.parse_args()
-
     manifest_path = Path(args.manifest)
     out_dir = Path(args.out_dir)
-    schema_dir = Path(args.schema_dir) if args.schema_dir else None
     out_dir.mkdir(parents=True, exist_ok=True)
     try:
-        blocking = compile_report(manifest_path, out_dir, args.timestamp, args.prediction_cutoff, schema_dir)
+        blocking = compile_report(manifest_path, out_dir, args.timestamp, args.prediction_cutoff, Path(args.schema_dir) if args.schema_dir else None)
         print(json.dumps({"out_dir": str(out_dir), "blocking": blocking}, indent=2, sort_keys=True))
-        if blocking and args.fail_on_blocking:
-            return 2
-        return 0
-    except Exception as exc:  # noqa: BLE001 - CLI must fail closed with artifact.
+        return 2 if blocking and args.fail_on_blocking else 0
+    except Exception as exc:  # noqa: BLE001
         write_json(out_dir / "compile_error.json", build_error_artifact(manifest_path, args.timestamp, exc))
         print(f"semantic-leakage compile failed: {exc}", file=sys.stderr)
         return 1

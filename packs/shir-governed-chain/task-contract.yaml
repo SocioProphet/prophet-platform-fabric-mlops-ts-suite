@@ -1,0 +1,64 @@
+pack_id: shir-governed-chain
+version: 0.1.0
+status: draft
+purpose: Run the governed SHIR graph-ML manifest chain end to end.
+inputs:
+  - name: input
+    type: file
+    media_type: text/turtle
+    required: false
+    default: packs/rdf-to-shir/fixtures/topolvm.ttl
+    description: Turtle fixture compiled into SHIR.
+  - name: schema_dir
+    type: directory
+    required: false
+    description: Optional semantic-serdes schema directory for validating governed outputs.
+outputs:
+  - name: rdf_to_shir_candidate_assertion
+    path: rdf-to-shir/candidate_assertion.json
+    schema: shir_candidate_assertion.schema.json
+  - name: rdf_to_shir_assertion
+    path: rdf-to-shir/assertion.json
+    schema: shir_assertion.schema.json
+  - name: pyg_manifest
+    path: shir-to-pyg/pyg_manifest.json
+  - name: pyg_projection_loss_report
+    path: shir-to-pyg/projection_loss_report.json
+    schema: shir_projection_loss_report.schema.json
+  - name: semantic_leakage_report
+    path: semantic-leakage/semantic_leakage_report.json
+  - name: semantic_leakage_projection_loss_report
+    path: semantic-leakage/projection_loss_report.json
+    schema: shir_projection_loss_report.schema.json
+  - name: chain_run_receipt
+    path: chain_run_receipt.json
+    schema: shir_receipt.schema.json
+  - name: chain_error
+    path: chain_error.json
+    required_on_failure: true
+runtime:
+  language: python
+  minimum_version: '3.11'
+  dependency_profile:
+    required: []
+    optional_validation:
+      - jsonschema
+commands:
+  run: >-
+    python packs/shir-governed-chain/tools/run_shir_chain.py
+    --out-dir /tmp/shir-governed-chain
+  run_with_validation: >-
+    python packs/shir-governed-chain/tools/run_shir_chain.py
+    --out-dir /tmp/shir-governed-chain
+    --schema-dir ../semantic-serdes/schemas
+guarantees:
+  - RDF/Turtle input compiles into SHIR assertion and receipt artifacts.
+  - SHIR assertion lowers into a PyG-style manifest using relation-node preservation.
+  - Projection-loss accounting is emitted before graph-ML export artifacts are accepted.
+  - Semantic-leakage detection runs after PyG manifest generation.
+  - Final receipt summarizes source hash, SHIR assertion hash, PyG manifest hash, projection-loss hash, semantic-leakage hash, policy decision, stage receipts, and replay metadata.
+non_goals:
+  - Tensor materialization.
+  - GNN training.
+  - Ontology promotion.
+  - Automatic feature repair.

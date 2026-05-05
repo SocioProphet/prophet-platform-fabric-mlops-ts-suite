@@ -1,0 +1,77 @@
+name: validate-shir-governed-chain
+
+on:
+  pull_request:
+    paths:
+      - "packs/shir-governed-chain/**"
+      - "packs/rdf-to-shir/**"
+      - "packs/shir-to-pyg/**"
+      - "packs/projection-loss-report/**"
+      - "packs/semantic-leakage/**"
+      - ".github/workflows/validate-shir-governed-chain.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "packs/shir-governed-chain/**"
+      - "packs/rdf-to-shir/**"
+      - "packs/shir-to-pyg/**"
+      - "packs/projection-loss-report/**"
+      - "packs/semantic-leakage/**"
+      - ".github/workflows/validate-shir-governed-chain.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-shir-governed-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fabric suite
+        uses: actions/checkout@v4
+        with:
+          path: fabric-suite
+      - name: Checkout semantic-serdes schemas
+        uses: actions/checkout@v4
+        with:
+          repository: SocioProphet/semantic-serdes
+          path: semantic-serdes
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pyyaml
+      - name: Run governed SHIR chain
+        working-directory: fabric-suite
+        run: |
+          python packs/shir-governed-chain/tools/run_shir_chain.py \
+            --out-dir /tmp/shir-governed-chain \
+            --schema-dir ../semantic-serdes/schemas
+          test -f /tmp/shir-governed-chain/rdf-to-shir/candidate_assertion.json
+          test -f /tmp/shir-governed-chain/rdf-to-shir/assertion.json
+          test -f /tmp/shir-governed-chain/rdf-to-shir/receipt.json
+          test -f /tmp/shir-governed-chain/shir-to-pyg/pyg_manifest.json
+          test -f /tmp/shir-governed-chain/shir-to-pyg/projection_loss_report.json
+          test -f /tmp/shir-governed-chain/semantic-leakage/semantic_leakage_report.json
+          test -f /tmp/shir-governed-chain/semantic-leakage/projection_loss_report.json
+          test -f /tmp/shir-governed-chain/chain_run_receipt.json
+      - name: Assert governed chain receipt and safety decisions
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path('/tmp/shir-governed-chain')
+          receipt = json.loads((out / 'chain_run_receipt.json').read_text())
+          pyg = json.loads((out / 'shir-to-pyg' / 'pyg_manifest.json').read_text())
+          projection_loss = json.loads((out / 'shir-to-pyg' / 'projection_loss_report.json').read_text())
+          leakage = json.loads((out / 'semantic-leakage' / 'semantic_leakage_report.json').read_text())
+          assert receipt['policy_decision']['decision'] == 'ALLOW'
+          assert receipt['semantic_leakage_checked'] is True
+          params = receipt['transform']['parameters']
+          assert set(params['stage_receipts']) == {'rdf_to_shir', 'shir_to_pyg', 'semantic_leakage'}
+          assert pyg['relation_strategy'] == 'relation_node'
+          assert any(item['semantic_dimension'] == 'N_ARY_RELATION' and item['loss_mode'] == 'PRESERVED' for item in projection_loss['loss_items'])
+          assert leakage['risk_level'] == 'NONE'
+          output_types = {item['artifact_type'] for item in receipt['outputs']}
+          assert {'SHIR_JSON', 'PYG_MANIFEST', 'PROJECTION_LOSS_REPORT', 'VALIDATION_REPORT'}.issubset(output_types)
+          PY
