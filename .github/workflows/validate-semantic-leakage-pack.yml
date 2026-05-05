@@ -1,0 +1,85 @@
+name: validate-semantic-leakage-pack
+
+on:
+  pull_request:
+    paths:
+      - "packs/semantic-leakage/**"
+      - ".github/workflows/validate-semantic-leakage-pack.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "packs/semantic-leakage/**"
+      - ".github/workflows/validate-semantic-leakage-pack.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-semantic-leakage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fabric suite
+        uses: actions/checkout@v4
+        with:
+          path: fabric-suite
+      - name: Checkout semantic-serdes schemas
+        uses: actions/checkout@v4
+        with:
+          repository: SocioProphet/semantic-serdes
+          path: semantic-serdes
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pyyaml
+      - name: Compile clean semantic-leakage report and validate outputs
+        working-directory: fabric-suite
+        run: |
+          python packs/semantic-leakage/tools/semantic_leakage.py \
+            --manifest packs/semantic-leakage/fixtures/clean_pyg_manifest.json \
+            --out-dir /tmp/semantic-leakage-clean \
+            --schema-dir ../semantic-serdes/schemas
+          test -f /tmp/semantic-leakage-clean/semantic_leakage_report.json
+          test -f /tmp/semantic-leakage-clean/projection_loss_report.json
+          test -f /tmp/semantic-leakage-clean/receipt.json
+          python - <<'PY'
+          import json
+          report = json.load(open('/tmp/semantic-leakage-clean/projection_loss_report.json'))
+          native = json.load(open('/tmp/semantic-leakage-clean/semantic_leakage_report.json'))
+          receipt = json.load(open('/tmp/semantic-leakage-clean/receipt.json'))
+          assert report['semantic_leakage']['checked'] is True
+          assert report['semantic_leakage']['markers'] == ['NONE']
+          assert report['semantic_leakage']['risk_level'] == 'NONE'
+          assert native['findings'] == []
+          assert receipt['semantic_leakage_checked'] is True
+          PY
+      - name: Compile leaking semantic-leakage report and verify fail-closed exit
+        working-directory: fabric-suite
+        run: |
+          set +e
+          python packs/semantic-leakage/tools/semantic_leakage.py \
+            --manifest packs/semantic-leakage/fixtures/leaking_pyg_manifest.json \
+            --out-dir /tmp/semantic-leakage-leaking \
+            --prediction-cutoff 2026-01-01T00:00:00Z \
+            --schema-dir ../semantic-serdes/schemas \
+            --fail-on-blocking
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test -f /tmp/semantic-leakage-leaking/semantic_leakage_report.json
+          test -f /tmp/semantic-leakage-leaking/projection_loss_report.json
+          test -f /tmp/semantic-leakage-leaking/receipt.json
+          python - <<'PY'
+          import json
+          report = json.load(open('/tmp/semantic-leakage-leaking/projection_loss_report.json'))
+          native = json.load(open('/tmp/semantic-leakage-leaking/semantic_leakage_report.json'))
+          markers = set(report['semantic_leakage']['markers'])
+          required = {'RDF_TYPE_LABEL', 'ONTOLOGY_HIERARCHY', 'SOURCE_FILENAME', 'PROVENANCE_FIELD', 'TARGET_PROPERTY', 'FUTURE_TIMESTAMP', 'TRAIN_TEST_CONTAMINATION'}
+          assert required.issubset(markers)
+          assert report['semantic_leakage']['risk_level'] == 'BLOCKING'
+          assert any(item['severity'] == 'BLOCKING' for item in report['loss_items'])
+          assert native['risk_level'] == 'BLOCKING'
+          assert report['governance']['training_allowed'] is False
+          assert report['governance']['export_allowed'] is False
+          PY
