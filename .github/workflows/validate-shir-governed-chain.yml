@@ -67,7 +67,8 @@ jobs:
           leakage = json.loads((out / 'semantic-leakage' / 'semantic_leakage_report.json').read_text())
           assert receipt['policy_decision']['decision'] == 'ALLOW'
           assert receipt['semantic_leakage_checked'] is True
-          assert set(receipt['stage_receipts']) == {'rdf_to_shir', 'shir_to_pyg', 'semantic_leakage'}
+          params = receipt['transform']['parameters']
+          assert set(params['stage_receipts']) == {'rdf_to_shir', 'shir_to_pyg', 'semantic_leakage'}
           assert pyg['relation_strategy'] == 'relation_node'
           assert any(item['semantic_dimension'] == 'N_ARY_RELATION' and item['loss_mode'] == 'PRESERVED' for item in projection_loss['loss_items'])
           assert leakage['risk_level'] == 'NONE'
