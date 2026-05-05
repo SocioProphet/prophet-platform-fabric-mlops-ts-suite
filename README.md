@@ -1,8 +1,8 @@
-# Prophet Platform Fabric (Multi-cluster + Multi-mesh baseline)
+# Prophet Platform Fabric
 
-This repo is a standard Kubernetes “fabric” stack you can deploy in every region/edge cluster.
+This repository contains the multi-cluster and multi-mesh fabric baseline for Prophet Platform MLOps work.
 
-## Deploy (single cluster)
+## Deploy
 
 ```bash
 cd helm
@@ -11,65 +11,74 @@ helmfile apply
 
 ## Notes
 
-- This is a baseline, not a finished product.
-- For production you will want:
-  - GitOps (Argo CD) driving Helmfile/Helm
-  - locked versions + SBOM
-  - resource tuning per environment
-  - network policies + admission policies
+This is a baseline, not a finished product. Production deployments should use GitOps, locked versions, SBOMs, resource tuning, network policies, and admission policies.
 
 See `docs/fabric-standard.md`.
-
 
 ## Atoms and pods we ship
 
 See:
+
 - `docs/atoms-catalog.md`
 - `docs/pods-to-ship.md`
 - `docs/profile-matrix.md`
 
+## Prophet Hierarchy Tree
 
-## Prophet Hierarchy Tree (PHT)
+See `docs/pht.md` for the canonical platform and application layering.
 
-See `docs/pht.md` for the canonical platform/app layering: Fabric → Prophet Platform → SocioProfit app.
+## Ray Train and Ray Serve
 
+See `docs/mlops-ray.md` for the standard Prophet model operations workflow aligned with KubeRay.
 
-## Ray Train + Ray Serve (MLOps)
+## MLOps ecosystem add-ons
 
-See `docs/mlops-ray.md` for the standard Prophet model ops workflow aligned with KubeRay (RayJob/RayService).
+Ray is the default distributed runtime in the main `helm/helmfile.yaml`.
 
+For broader open-source MLOps support, see:
 
-## MLOps ecosystem add-ons (beyond Ray)
-
-Ray is the default distributed runtime (Train + Serve) in the main `helm/helmfile.yaml`.
-
-For a broader open-source MLOps toolchain, apply the optional Helmfiles:
-
-- `helm/helmfile-mlops-core.yaml` (Argo Workflows, MLflow, Feast operator, Spark operator, OpenTelemetry operator)
-- `helm/helmfile-ml-serving.yaml` (KServe, Seldon Core 2)
-- `helm/helmfile-gpu.yaml` (NVIDIA GPU Operator)
-
-See:
 - `docs/mlops-ecosystem.md`
 - `docs/mlops-ray.md`
 
+## SHIR governed graph-ML manifest chain
+
+The SHIR governed chain proves the first semantic-to-graph-ML manifest path with governance receipts and safety gates:
+
+```text
+rdf-to-shir -> shir-to-pyg -> semantic-leakage -> chain receipt
+```
+
+See:
+
+- `docs/shir-governed-chain.md`
+- `packs/rdf-to-shir/README.md`
+- `packs/projection-loss-report/README.md`
+- `packs/shir-to-pyg/README.md`
+- `packs/semantic-leakage/README.md`
+- `packs/shir-governed-chain/README.md`
+
+The chain is manifest-only in v0.1. It exists to prove semantic contract integrity, projection-loss accounting, semantic-leakage detection, and replayable receipts before tensor materialization or training.
+
+Run:
+
+```bash
+python packs/shir-governed-chain/tools/run_shir_chain.py --out-dir /tmp/shir-governed-chain
+```
 
 ## Time-series model families
 
-See `docs/time-series-model-families.md` for the Prophet-supported time-series model taxonomy (ARIMA/ETS, ARCH/GARCH, RNN/seq2seq, transformers, foundation models, options surfaces, etc.) and how they map into Prophet MLOps.
-
+See `docs/time-series-model-families.md` for the Prophet-supported time-series model taxonomy and how it maps into Prophet MLOps.
 
 ## Time-series suite v1
 
 See:
+
 - `docs/time-series-suite-v1.md`
 - `docs/time-series-eval-gates.md`
-- `model-specs/` (example ProphetModelSpec YAMLs)
-- `docker/` (reference training images)
-- `workflows/` (Argo workflow templates)
-
+- `model-specs/`
+- `docker/`
+- `workflows/`
 
 ## Time-series roadmap
 
-See `docs/time-series-roadmap.md` for the time-series suite roadmap and pack plan.
-See `docs/time-series-library-map.md` for recommended OSS engines behind Prophet time-series contracts.
+See `docs/time-series-roadmap.md` and `docs/time-series-library-map.md`.
