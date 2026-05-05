@@ -1,0 +1,111 @@
+{
+  "manifest_id": "pyg.manifest.sourceos.topolvm.leaking.001",
+  "kind": "PyGHeteroDataManifest",
+  "created_at": "1970-01-01T00:00:00Z",
+  "source_assertion_ref": "shir.assertion.sourceos.topolvm.provisions.pv.001",
+  "source_representation": "SHIR",
+  "target_representation": "PYG_HETERODATA",
+  "target_framework": "pyg",
+  "materialization": "manifest_only",
+  "relation_strategy": "binary_edges",
+  "node_types": {
+    "Resource": {
+      "count": 2,
+      "ids": [
+        "entity.train.label_storage_class",
+        "entity.test.label_storage_class"
+      ],
+      "labels": {
+        "entity.train.label_storage_class": "label_storage_class",
+        "entity.test.label_storage_class": "label_storage_class"
+      },
+      "source_refs": {
+        "entity.train.label_storage_class": "source_filename://labels/train.csv",
+        "entity.test.label_storage_class": "source_filename://labels/test.csv"
+      },
+      "trainable": true
+    }
+  },
+  "edge_types": [
+    {
+      "edge_type": "(Resource, predicted_label, Resource)",
+      "source_type": "Resource",
+      "relation": "predicted_label",
+      "target_type": "Resource",
+      "source_id": "entity.train.label_storage_class",
+      "target_id": "entity.test.label_storage_class",
+      "source_ref": "provenance://expected-output"
+    }
+  ],
+  "feature_provenance": [
+    {
+      "node_id": "entity.train.label_storage_class",
+      "feature_name": "rdf_type_label",
+      "source_ref": "ontology://StorageClass",
+      "trainable": true
+    },
+    {
+      "node_id": "entity.train.label_storage_class",
+      "feature_name": "ontology_hierarchy_path",
+      "source_ref": "ontology://StorageResource/PersistentVolume",
+      "trainable": true
+    },
+    {
+      "node_id": "entity.train.label_storage_class",
+      "feature_name": "source_filename",
+      "source_ref": "source_filename://labels/train.csv",
+      "trainable": true
+    },
+    {
+      "node_id": "entity.train.label_storage_class",
+      "feature_name": "prediction_label",
+      "source_ref": "expected://storage_class",
+      "trainable": true
+    },
+    {
+      "node_id": "entity.train.label_storage_class",
+      "feature_name": "provenance_receipt_ref",
+      "source_ref": "receipt://model-labels",
+      "trainable": true
+    }
+  ],
+  "temporal_features": [
+    {
+      "feature_name": "observed_at",
+      "value": "2026-05-04T00:00:00Z",
+      "trainable": true
+    }
+  ],
+  "train_test_split": {
+    "status": "MATERIALIZED",
+    "train_ids": [
+      "entity.train.label_storage_class",
+      "entity.duplicate"
+    ],
+    "test_ids": [
+      "entity.test.label_storage_class",
+      "entity.duplicate"
+    ],
+    "leakage_sensitive": true
+  },
+  "semantic_leakage": {
+    "checked": true,
+    "risk_level": "HIGH",
+    "markers": [
+      "ONTOLOGY_HIERARCHY",
+      "TARGET_PROPERTY"
+    ],
+    "mitigations": [
+      "Remove ontology hierarchy from trainable tensors.",
+      "Remove prediction-label fields from trainable tensors."
+    ]
+  },
+  "governance": {
+    "review_status": "REQUIRED",
+    "export_allowed": true,
+    "training_allowed": true,
+    "policy_basis": [
+      "shir.v0.1.semantic_leakage_detection_required"
+    ]
+  }
+}
