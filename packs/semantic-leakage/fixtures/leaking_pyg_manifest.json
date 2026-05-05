@@ -90,12 +90,14 @@
   },
   "semantic_leakage": {
     "checked": true,
-    "risk_level": "MEDIUM",
+    "risk_level": "HIGH",
     "markers": [
-      "ONTOLOGY_HIERARCHY"
+      "ONTOLOGY_HIERARCHY",
+      "TARGET_PROPERTY"
     ],
     "mitigations": [
-      "Remove ontology hierarchy from trainable tensors."
+      "Remove ontology hierarchy from trainable tensors.",
+      "Remove prediction-label fields from trainable tensors."
     ]
   },
   "governance": {
