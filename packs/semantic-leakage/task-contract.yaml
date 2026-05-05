@@ -1,0 +1,70 @@
+pack_id: semantic-leakage
+version: 0.1.0
+status: draft
+tracking_issue: https://github.com/SocioProphet/prophet-platform-fabric-mlops-ts-suite/issues/38
+purpose: Detect semantic leakage in SHIR-derived graph/retrieval/ML projection manifests.
+inputs:
+  - name: manifest
+    type: file
+    media_type: application/json
+    required: true
+    description: SHIR-derived projection manifest, such as a PyG HeteroData manifest.
+  - name: prediction_cutoff
+    type: timestamp
+    required: false
+    description: Optional prediction cutoff used to detect future timestamp leakage.
+  - name: schema_dir
+    type: directory
+    required: false
+    description: Optional semantic-serdes schemas directory for validating emitted ProjectionLossReport and Receipt artifacts.
+outputs:
+  - name: semantic_leakage_report
+    path: semantic_leakage_report.json
+    description: Native semantic-leakage findings report.
+  - name: projection_loss_report
+    path: projection_loss_report.json
+    schema: shir_projection_loss_report.schema.json
+  - name: receipt
+    path: receipt.json
+    schema: shir_receipt.schema.json
+  - name: compile_error
+    path: compile_error.json
+    required_on_failure: true
+runtime:
+  language: python
+  minimum_version: '3.11'
+  dependency_profile:
+    required: []
+    optional_validation:
+      - jsonschema
+commands:
+  clean: >-
+    python packs/semantic-leakage/tools/semantic_leakage.py
+    --manifest packs/semantic-leakage/fixtures/clean_pyg_manifest.json
+    --out-dir /tmp/semantic-leakage-clean
+  clean_with_validation: >-
+    python packs/semantic-leakage/tools/semantic_leakage.py
+    --manifest packs/semantic-leakage/fixtures/clean_pyg_manifest.json
+    --out-dir /tmp/semantic-leakage-clean
+    --schema-dir ../semantic-serdes/schemas
+  leaking_fail_closed: >-
+    python packs/semantic-leakage/tools/semantic_leakage.py
+    --manifest packs/semantic-leakage/fixtures/leaking_pyg_manifest.json
+    --out-dir /tmp/semantic-leakage-leaking
+    --prediction-cutoff 2026-01-01T00:00:00Z
+    --schema-dir ../semantic-serdes/schemas
+    --fail-on-blocking
+guarantees:
+  - Clean manifests produce checked semantic leakage metadata and valid receipts.
+  - RDF/type/class-label leakage is detected.
+  - Ontology hierarchy leakage is detected.
+  - Source filename and provenance-field leakage are detected.
+  - Future timestamp leakage can produce BLOCKING severity.
+  - Train/test contamination can produce BLOCKING severity.
+  - Findings emit semantic-serdes-compatible ProjectionLossReport and Receipt artifacts.
+  - Blocking findings can stop downstream publication with --fail-on-blocking.
+non_goals:
+  - Model training.
+  - Automatic feature repair.
+  - Ontology mutation or promotion.
+  - Full statistical leakage analysis.
