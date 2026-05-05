@@ -5,7 +5,8 @@ Chain:
   rdf-to-shir -> shir-to-pyg -> semantic-leakage -> chain receipt
 
 The chain is manifest-only and deterministic by default. It emits a final
-receipt summarizing hashes, stage receipts, policy decision, and replay data.
+semantic-serdes-compatible receipt summarizing hashes, stage receipts, policy
+decision, and replay data.
 """
 from __future__ import annotations
 
@@ -31,10 +32,6 @@ def sha256_text(text: str) -> str:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def sha256_json(doc: Dict[str, Any]) -> str:
-    return sha256_text(json.dumps(doc, sort_keys=True, separators=(",", ":")))
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -103,28 +100,34 @@ def stage_hash(path: Path) -> Dict[str, str]:
     return {"artifact_ref": str(path), "algorithm": "sha256", "value": sha256_file(path)}
 
 
-def build_chain_receipt(
-    input_path: Path,
-    out_dir: Path,
-    timestamp: str,
-    schema_dir: Optional[Path],
-) -> Dict[str, Any]:
+def build_chain_receipt(input_path: Path, out_dir: Path, timestamp: str, schema_dir: Optional[Path]) -> Dict[str, Any]:
     rdf_dir = out_dir / "rdf-to-shir"
     pyg_dir = out_dir / "shir-to-pyg"
     leakage_dir = out_dir / "semantic-leakage"
 
     rdf_receipt = load_json(rdf_dir / "receipt.json")
     pyg_receipt = load_json(pyg_dir / "receipt.json")
+    leakage_receipt = load_json(leakage_dir / "receipt.json")
     projection_loss = load_json(pyg_dir / "projection_loss_report.json")
     leakage_report = load_json(leakage_dir / "semantic_leakage_report.json")
     leakage_loss = load_json(leakage_dir / "projection_loss_report.json")
-    leakage_receipt = load_json(leakage_dir / "receipt.json")
 
     blocking = (
         any(item.get("severity") == "BLOCKING" for item in projection_loss.get("loss_items", []))
         or any(item.get("severity") == "BLOCKING" for item in leakage_loss.get("loss_items", []))
     )
     policy_decision = "REVIEW_REQUIRED" if blocking else "ALLOW"
+
+    stage_receipts = {
+        "rdf_to_shir": rdf_receipt["receipt_id"],
+        "shir_to_pyg": pyg_receipt["receipt_id"],
+        "semantic_leakage": leakage_receipt["receipt_id"],
+    }
+    stage_summary = {
+        "projection_loss_risk": projection_loss.get("governance", {}).get("review_status", "UNKNOWN"),
+        "semantic_leakage_risk": leakage_report.get("risk_level", "UNKNOWN"),
+        "semantic_leakage_markers": leakage_report.get("markers", []),
+    }
 
     output_artifacts = [
         (rdf_dir / "candidate_assertion.json", "SHIR_JSON"),
@@ -135,7 +138,7 @@ def build_chain_receipt(
         (leakage_dir / "projection_loss_report.json", "PROJECTION_LOSS_REPORT"),
     ]
 
-    receipt = {
+    return {
         "receipt_id": f"shir.receipt.governed_chain.{sha256_file(input_path)[:12]}",
         "kind": "Receipt",
         "receipt_type": "VALIDATION",
@@ -159,6 +162,8 @@ def build_chain_receipt(
             "config_hash": CONFIG_HASH,
             "parameters": {
                 "stages": ["rdf-to-shir", "shir-to-pyg", "semantic-leakage"],
+                "stage_receipts": stage_receipts,
+                "stage_summary": stage_summary,
                 "semantic_serdes_schema_validation": bool(schema_dir),
                 "relation_strategy": "relation_node",
             },
@@ -176,11 +181,7 @@ def build_chain_receipt(
         "projection_loss_report_ref": projection_loss["report_id"],
         "semantic_leakage_checked": True,
         "outputs": [
-            {
-                "artifact_ref": str(path),
-                "artifact_type": artifact_type,
-                "hash": stage_hash(path),
-            }
+            {"artifact_ref": str(path), "artifact_type": artifact_type, "hash": stage_hash(path)}
             for path, artifact_type in output_artifacts
         ],
         "replay": {
@@ -190,19 +191,12 @@ def build_chain_receipt(
             "deterministic_seed": 7,
             "environment_ref": "python-stdlib-orchestrator",
         },
-        "notes": "Governed SHIR chain completed: RDF/Turtle subset compiled to SHIR, projected to PyG manifest, audited for projection loss, and checked for semantic leakage.",
-        "stage_receipts": {
-            "rdf_to_shir": rdf_receipt["receipt_id"],
-            "shir_to_pyg": pyg_receipt["receipt_id"],
-            "semantic_leakage": leakage_receipt["receipt_id"],
-        },
-        "stage_summary": {
-            "projection_loss_risk": projection_loss.get("governance", {}).get("review_status", "UNKNOWN"),
-            "semantic_leakage_risk": leakage_report.get("risk_level", "UNKNOWN"),
-            "semantic_leakage_markers": leakage_report.get("markers", []),
-        },
+        "notes": (
+            "Governed SHIR chain completed: RDF/Turtle subset compiled to SHIR, projected to PyG manifest, "
+            f"audited for projection loss, and checked for semantic leakage. Stage receipts: {json.dumps(stage_receipts, sort_keys=True)}. "
+            f"Stage summary: {json.dumps(stage_summary, sort_keys=True)}."
+        ),
     }
-    return receipt
 
 
 def validate_chain_receipt(schema_dir: Path, receipt_path: Path) -> None:
@@ -220,30 +214,19 @@ def build_error_artifact(input_path: Path, timestamp: str, error: Exception) -> 
     return {
         "kind": "SHIRGovernedChainError",
         "created_at": timestamp,
-        "compiler": {
-            "name": "shir-governed-chain",
-            "version": "0.1.0",
-            "runtime": "python-stdlib-orchestrator",
-        },
+        "compiler": {"name": "shir-governed-chain", "version": "0.1.0", "runtime": "python-stdlib-orchestrator"},
         "input_ref": str(input_path),
         "error_type": type(error).__name__,
         "error_message": str(error),
         "policy_decision": "QUARANTINE",
-        "replay": {
-            "replayable": input_path.exists(),
-            "config_hash": CONFIG_HASH,
-        },
+        "replay": {"replayable": input_path.exists(), "config_hash": CONFIG_HASH},
     }
 
 
 def main() -> int:
     root = repo_root()
     parser = argparse.ArgumentParser(description="Run the governed SHIR demo chain end to end.")
-    parser.add_argument(
-        "--input",
-        default=str(root / "packs" / "rdf-to-shir" / "fixtures" / "topolvm.ttl"),
-        help="Input Turtle fixture",
-    )
+    parser.add_argument("--input", default=str(root / "packs" / "rdf-to-shir" / "fixtures" / "topolvm.ttl"), help="Input Turtle fixture")
     parser.add_argument("--out-dir", required=True, help="Output directory for chain artifacts")
     parser.add_argument("--schema-dir", help="Optional semantic-serdes schemas directory")
     parser.add_argument("--timestamp", default=DEFAULT_TIMESTAMP, help="Deterministic timestamp for generated artifacts")
