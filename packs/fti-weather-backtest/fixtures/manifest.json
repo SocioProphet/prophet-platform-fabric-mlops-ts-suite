@@ -1,11 +1,19 @@
 {
   "pack_id": "fti-weather-backtest",
   "version": "0.1.0",
+  "tritfabric_alignment": {
+    "atlas_services": ["OrchestratorService", "RegistryService"],
+    "orchestrator_methods": ["SubmitTrainJob", "SubmitTuneStudy"],
+    "registry_methods": ["ListArtifacts", "GetLedger", "PromoteArtifact"],
+    "ledger_required": true,
+    "promotion_gate_required": true,
+    "transport": "gRPC-first REST-mirror friendly"
+  },
   "contract_refs": [
     "https://schemas.socioprophet.org/prophet/feature-registry-entry.v0.1.schema.json"
   ],
   "inputs": ["fti_daily_features", "weather_features", "poi_set_versions", "target_outcomes"],
-  "outputs": ["backtest_manifest", "leakage_report", "drift_report", "evaluation_receipt"],
-  "gates": ["target_date_leakage_check", "poi_version_stability_check", "denominator_drift_check", "weather_freshness_check"],
+  "outputs": ["backtest_manifest", "leakage_report", "drift_report", "evaluation_receipt", "atlas_registry_artifact"],
+  "gates": ["target_date_leakage_check", "poi_version_stability_check", "denominator_drift_check", "weather_freshness_check", "tritfabric_promotion_gate"],
   "receipt_required": true
 }
