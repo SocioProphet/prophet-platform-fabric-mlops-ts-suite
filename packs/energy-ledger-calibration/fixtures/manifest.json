@@ -2,7 +2,7 @@
   "pack_id": "energy-ledger-calibration",
   "version": "0.1.0",
   "tritfabric_alignment": {
-    "atlas_service": "RegistryService",
+    "atlas_services": ["RegistryService"],
     "registry_methods": ["GetLedger", "PromoteArtifact"],
     "ledger_required": true,
     "promotion_gate_required": true,
