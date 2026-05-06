@@ -1,0 +1,11 @@
+{
+  "pack_id": "fti-weather-backtest",
+  "version": "0.1.0",
+  "contract_refs": [
+    "https://schemas.socioprophet.org/prophet/feature-registry-entry.v0.1.schema.json"
+  ],
+  "inputs": ["fti_daily_features", "weather_features", "poi_set_versions", "target_outcomes"],
+  "outputs": ["backtest_manifest", "leakage_report", "drift_report", "evaluation_receipt"],
+  "gates": ["target_date_leakage_check", "poi_version_stability_check", "denominator_drift_check", "weather_freshness_check"],
+  "receipt_required": true
+}
