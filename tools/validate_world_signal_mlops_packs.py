@@ -24,12 +24,14 @@ EXPECTED_PACKS = {
 }
 
 REQUIRED_TRITFABRIC_KEYS = {
+    "atlas_services",
     "ledger_required",
     "promotion_gate_required",
     "transport",
 }
 
 REQUIRED_REGISTRY_METHODS = {"GetLedger", "PromoteArtifact"}
+ALLOWED_ATLAS_SERVICES = {"OrchestratorService", "RegistryService"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -62,9 +64,21 @@ def validate_manifest(pack: str, manifest: dict[str, Any], path: Path) -> list[s
         errors.append(f"{path}: tritfabric_alignment object is required")
         return errors
 
+    if "atlas_service" in alignment:
+        errors.append(f"{path}: tritfabric_alignment.atlas_service is deprecated; use atlas_services array")
+
     for key in REQUIRED_TRITFABRIC_KEYS:
         if key not in alignment:
             errors.append(f"{path}: tritfabric_alignment.{key} is required")
+
+    atlas_services = alignment.get("atlas_services")
+    if not isinstance(atlas_services, list) or not atlas_services:
+        errors.append(f"{path}: tritfabric_alignment.atlas_services must be a non-empty array")
+    else:
+        unknown_services = sorted(set(atlas_services) - ALLOWED_ATLAS_SERVICES)
+        if unknown_services:
+            errors.append(f"{path}: unknown atlas_services: {', '.join(unknown_services)}")
+
     if alignment.get("ledger_required") is not True:
         errors.append(f"{path}: tritfabric_alignment.ledger_required must be true")
     if alignment.get("promotion_gate_required") is not True:
