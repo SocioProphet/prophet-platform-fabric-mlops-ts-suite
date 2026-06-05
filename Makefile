@@ -5,6 +5,8 @@ IAC ?= tofu
 WORKSPACE_MESH_DIR := infra/google-workspace-ops-mesh
 
 .PHONY: help \
+	doctor-workspace-ops \
+	install-opentofu-macos \
 	validate-workspace-prototype \
 	validate-workspace-mesh \
 	validate-workspace-all \
@@ -19,6 +21,10 @@ WORKSPACE_MESH_DIR := infra/google-workspace-ops-mesh
 
 help:
 	@echo "SocioProphet workspace operations targets"
+	@echo ""
+	@echo "Local readiness:"
+	@echo "  make doctor-workspace-ops"
+	@echo "  make install-opentofu-macos"
 	@echo ""
 	@echo "Validation:"
 	@echo "  make validate-workspace-prototype"
@@ -38,6 +44,14 @@ help:
 	@echo "  make tofu-workspace-mesh-plan"
 	@echo ""
 	@echo "Override binary when needed: make IAC=terraform terraform-workspace-mesh-plan"
+
+doctor-workspace-ops:
+	python3 scripts/check_workspace_ops.py
+
+install-opentofu-macos:
+	brew update
+	brew install opentofu
+	tofu -version
 
 validate-workspace-prototype:
 	python3 scripts/validate_google_workspace_ops_prototype.py
