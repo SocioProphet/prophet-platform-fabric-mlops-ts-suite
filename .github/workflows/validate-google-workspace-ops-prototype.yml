@@ -1,0 +1,33 @@
+name: Validate Google Workspace Ops Prototype
+
+on:
+  pull_request:
+    paths:
+      - 'apps-script/google-workspace-ops-prototype/**'
+      - 'scripts/validate_google_workspace_ops_prototype.py'
+      - '.github/workflows/validate-google-workspace-ops-prototype.yml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps-script/google-workspace-ops-prototype/**'
+      - 'scripts/validate_google_workspace_ops_prototype.py'
+      - '.github/workflows/validate-google-workspace-ops-prototype.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-google-workspace-ops-prototype:
+    name: Validate Google Workspace Ops Prototype
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate scaffold contract
+        run: python3 scripts/validate_google_workspace_ops_prototype.py
