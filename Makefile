@@ -50,7 +50,7 @@ doctor-workspace-ops:
 
 install-opentofu-macos:
 	brew update
-	brew install opentofu
+	HOMEBREW_NO_INSTALL_CLEANUP=1 brew install opentofu
 	tofu -version
 
 validate-workspace-prototype:
