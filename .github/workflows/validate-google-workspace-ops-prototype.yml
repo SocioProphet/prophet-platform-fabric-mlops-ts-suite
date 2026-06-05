@@ -3,6 +3,7 @@ name: Validate Google Workspace Ops Prototype
 on:
   pull_request:
     paths:
+      - 'Makefile'
       - 'apps-script/google-workspace-ops-prototype/**'
       - 'scripts/validate_google_workspace_ops_prototype.py'
       - '.github/workflows/validate-google-workspace-ops-prototype.yml'
@@ -11,6 +12,7 @@ on:
       - main
       - master
     paths:
+      - 'Makefile'
       - 'apps-script/google-workspace-ops-prototype/**'
       - 'scripts/validate_google_workspace_ops_prototype.py'
       - '.github/workflows/validate-google-workspace-ops-prototype.yml'
