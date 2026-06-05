@@ -3,6 +3,7 @@ name: Validate Google Workspace Ops Mesh
 on:
   pull_request:
     paths:
+      - 'Makefile'
       - 'infra/google-workspace-ops-mesh/**'
       - 'scripts/validate_google_workspace_ops_mesh.py'
       - '.github/workflows/validate-google-workspace-ops-mesh.yml'
@@ -11,6 +12,7 @@ on:
       - main
       - master
     paths:
+      - 'Makefile'
       - 'infra/google-workspace-ops-mesh/**'
       - 'scripts/validate_google_workspace_ops_mesh.py'
       - '.github/workflows/validate-google-workspace-ops-mesh.yml'
