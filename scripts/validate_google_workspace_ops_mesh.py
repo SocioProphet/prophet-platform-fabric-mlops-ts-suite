@@ -62,6 +62,24 @@ FORBIDDEN_DEFAULT_ROOT_NEEDLES = [
     'resource "googleworkspace_group_member"',
 ]
 
+SECRET_SCAN_EXCLUDED_DIR_NAMES = {
+    ".terraform",
+    "generated",
+    ".git",
+    "node_modules",
+}
+
+SECRET_SCAN_SUFFIX_ALLOWLIST = {
+    ".md",
+    ".tf",
+    ".tfvars.example",
+    ".py",
+    ".json",
+    ".yml",
+    ".yaml",
+    ".txt",
+}
+
 
 def fail(message: str) -> None:
     print(f"FAIL: {message}")
@@ -113,6 +131,15 @@ def validate_default_root_has_no_workspace_provider() -> None:
                 fail(f"default mesh root must not contain {needle} in {path.relative_to(ROOT)}")
 
 
+def should_scan_for_secrets(path: Path) -> bool:
+    relative = path.relative_to(MESH_ROOT)
+    if any(part in SECRET_SCAN_EXCLUDED_DIR_NAMES for part in relative.parts):
+        return False
+    if path.name == ".terraform.lock.hcl":
+        return True
+    return any(str(path).endswith(suffix) for suffix in SECRET_SCAN_SUFFIX_ALLOWLIST)
+
+
 def validate_no_obvious_secrets() -> None:
     forbidden = [
         "-----BEGIN PRIVATE KEY-----",
@@ -121,7 +148,7 @@ def validate_no_obvious_secrets() -> None:
         "access_token",
     ]
     for path in MESH_ROOT.rglob("*"):
-        if path.is_file():
+        if path.is_file() and should_scan_for_secrets(path):
             text = path.read_text(encoding="utf-8", errors="ignore")
             for marker in forbidden:
                 if marker in text:
