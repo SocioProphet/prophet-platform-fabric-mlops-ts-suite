@@ -1,0 +1,19 @@
+{
+  "pack_id": "energy-ledger-calibration",
+  "version": "0.1.0",
+  "tritfabric_alignment": {
+    "atlas_services": ["RegistryService"],
+    "registry_methods": ["GetLedger", "PromoteArtifact"],
+    "ledger_required": true,
+    "promotion_gate_required": true,
+    "transport": "gRPC-first REST-mirror friendly"
+  },
+  "contract_refs": [
+    "https://schemas.socioprophet.org/prophet/energy-ledger-entry.v0.1.schema.json",
+    "https://schemas.socioprophet.org/prophet/decision-ledger-entry.v0.1.schema.json"
+  ],
+  "inputs": ["energy_ledger_entries", "decision_ledger_entries", "promotion_outcomes", "review_labels"],
+  "outputs": ["margin_distribution_report", "flip_rate_report", "threshold_calibration_report", "policy_impact_diff", "calibration_receipt"],
+  "gates": ["sample_size_gate", "low_margin_bucket_report", "flip_rate_policy_present", "policy_impact_diff_required", "tritfabric_promotion_gate"],
+  "receipt_required": true
+}

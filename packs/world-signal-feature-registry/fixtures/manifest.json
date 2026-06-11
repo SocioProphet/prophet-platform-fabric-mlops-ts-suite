@@ -1,0 +1,18 @@
+{
+  "pack_id": "world-signal-feature-registry",
+  "version": "0.1.0",
+  "tritfabric_alignment": {
+    "atlas_services": ["RegistryService"],
+    "registry_methods": ["ListArtifacts", "GetLedger", "PromoteArtifact"],
+    "ledger_required": true,
+    "promotion_gate_required": true,
+    "transport": "gRPC-first REST-mirror friendly"
+  },
+  "contract_refs": [
+    "https://schemas.socioprophet.org/prophet/feature-registry-entry.v0.1.schema.json"
+  ],
+  "inputs": ["feature_registry_entry"],
+  "outputs": ["validation_receipt", "promotion_readiness_summary", "atlas_registry_artifact"],
+  "gates": ["contract_present", "feature_id_namespaced", "provenance_declared", "promotion_state_explicit", "tritfabric_promotion_gate"],
+  "receipt_required": true
+}
