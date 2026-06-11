@@ -1,0 +1,20 @@
+{
+  "pack_id": "acr-graph-ml",
+  "version": "0.1.0",
+  "tritfabric_alignment": {
+    "atlas_services": ["OrchestratorService", "RegistryService"],
+    "orchestrator_methods": ["SubmitTrainJob", "SubmitTuneStudy"],
+    "registry_methods": ["ListArtifacts", "GetLedger", "PromoteArtifact"],
+    "ledger_required": true,
+    "promotion_gate_required": true,
+    "transport": "gRPC-first REST-mirror friendly"
+  },
+  "contract_refs": [
+    "https://schemas.socioprophet.org/prophet/concordance-link.v0.1.schema.json",
+    "https://schemas.socioprophet.org/prophet/decision-ledger-entry.v0.1.schema.json"
+  ],
+  "inputs": ["canonical_entity_graph", "source_records", "concordance_links", "decision_ledger_entries", "relationship_edges"],
+  "outputs": ["graph_projection_manifest", "projection_loss_report", "semantic_leakage_report", "resolver_evaluation_receipt", "atlas_registry_artifact"],
+  "gates": ["false_merge_check", "false_split_check", "projection_loss_required", "semantic_leakage_required", "policy_version_pinned", "tritfabric_promotion_gate"],
+  "receipt_required": true
+}
